@@ -1,7 +1,10 @@
 // app/auth/page.tsx
+"use client";
+import { signIn } from "next-auth/react";
 import Link from 'next/link';
-import congnifyLogo from '../../public/cognify_logo.png';
+import congnifyLogo from '../../../public/cognify_logo.png';
 import Image from 'next/image';
+
 
 export default function AuthPage() {
   return (
@@ -27,8 +30,8 @@ export default function AuthPage() {
 
           <div className="space-y-4">
             {/* Social Login */}
-            <button className="w-full flex items-center justify-center space-x-3 border border-gray-200 
-                             py-3 rounded-xl hover:bg-gray-50 transition-colors duration-200">
+            <button onClick={() => signIn("google", { callbackUrl: "/onboarding/info" })} className="w-full flex items-center justify-center space-x-3 border border-gray-200 
+                             py-3 rounded-xl hover:bg-gray-50 transition-colors duration-200 cursor-pointer">
               <img src="https://www.svgrepo.com/show/475656/google-color.svg" className="w-5 h-5" alt="Google" />
               <span className="text-gray-600 font-light">Continue with Google</span>
             </button>
@@ -57,7 +60,7 @@ export default function AuthPage() {
             </div>
 
             <button className="w-full bg-[#5F7A7B] text-white py-3 rounded-xl mt-4 
-                             hover:shadow-md transition-shadow duration-200 placeholder-gray-700" >
+                             hover:shadow-md transition-shadow duration-200 placeholder-gray-700 cursor-pointer" >
               <Link href='../onboarding/info/'>Sign In</Link>
             </button>
 

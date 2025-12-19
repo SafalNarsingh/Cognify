@@ -80,7 +80,7 @@ export default function ScreeningPage() {
       <div className="w-full max-w-2xl mb-12">
         <div className="flex justify-between items-end mb-4">
           <div className="flex items-center space-x-3">
-            <Image src={congnifyLogo} alt="Cognify Logo" width={40} height={40} />
+            <Image src={congnifyLogo} alt="Cognify Logo" width={100} height={100} />
             <span className="text-gray-400 font-light text-sm">Step {step + 1} of 3</span>
           </div>
           <span className="text-[#5F7A7B] text-xs font-semibold uppercase tracking-widest">

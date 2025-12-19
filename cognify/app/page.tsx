@@ -24,7 +24,7 @@ export default function LandingPage() {
         </p>
 
         {/* Action Button */}
-        <Link href="/auth">
+        <Link href="/auth/login">
           <button className="mt-8 px-10 py-3 bg-[#5F7A7B] text-white rounded-full 
                            hover:bg-[#4D6364] transition-all duration-300 
                            font-medium tracking-wide shadow-sm cursor-pointer">
