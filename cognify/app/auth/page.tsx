@@ -58,11 +58,15 @@ export default function AuthPage() {
 
             <button className="w-full bg-[#5F7A7B] text-white py-3 rounded-xl mt-4 
                              hover:shadow-md transition-shadow duration-200">
-              Sign In
+              <Link href='../onboarding/info/'>Sign In</Link>
             </button>
 
             <p className="text-center text-sm text-gray-500 mt-6">
-              New to Cognify? <button className="text-[#5F7A7B] hover:underline">Create account</button>
+              New to Cognify? <button className="text-[#5F7A7B] hover:underline">
+                <Link href="/auth/signup">
+                    Create account
+                </Link>
+              </button>
             </p>
           </div>
         </div>
