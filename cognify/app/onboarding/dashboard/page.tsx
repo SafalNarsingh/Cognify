@@ -73,7 +73,7 @@ function ChatAssistant() {
               className="absolute bottom-full right-0 mb-4 w-[320px] h-[450px] bg-white shadow-2xl rounded-[2rem] border border-gray-100 flex flex-col overflow-hidden pointer-events-auto"
             >
               <div className="p-5 border-b border-gray-50 flex justify-between items-center bg-[#F9F9F7]">
-                <span className="text-sm font-medium text-gray-800">Cognify Assistant</span>
+                <span className="text-sm font-medium text-gray-800">Assistant</span>
                 <button onClick={() => setIsOpen(false)} className="text-gray-400 p-2">&times;</button>
               </div>
               <div className="flex-1 p-4 text-xs text-gray-400 italic">How can I help you today?</div>
@@ -89,7 +89,7 @@ function ChatAssistant() {
 }
 
 // --- JOURNAL COMPONENT ---
-function JournalWindow({ isOpen, onClose, userId }: { isOpen: boolean; onClose: () => void; userId: string }) {
+function JournalWindow({ isOpen, onClose, userId }: { isOpen: boolean; onClose: () => void; userId: string | undefined }) {
   const [journalText, setJournalText] = useState("");
   const [history, setHistory] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -100,20 +100,35 @@ function JournalWindow({ isOpen, onClose, userId }: { isOpen: boolean; onClose: 
   );
 
   useEffect(() => {
-    if (isOpen && userId) fetchHistory();
+    // Crucial: Only fetch if we have a valid userId
+    if (isOpen && userId) {
+      fetchHistory();
+    }
   }, [isOpen, userId]);
 
   const fetchHistory = async () => {
-    const { data } = await supabase.from('journals').select('*').order('created_at', { ascending: false });
-    if (data) setHistory(data);
+    if (!userId) return;
+    
+    // Updated Query: Filter by current user_id
+    const { data, error } = await supabase
+      .from('journals')
+      .select('*')
+      .eq('user_id', userId) // Filter for specific user
+      .order('created_at', { ascending: false });
+
+    if (!error && data) setHistory(data);
   };
 
   const startNewEntry = () => setJournalText("");
 
   const saveJournal = async () => {
-    if (!journalText.trim()) return;
+    if (!journalText.trim() || !userId) return;
     setIsLoading(true);
-    const { error } = await supabase.from('journals').insert([{ user_id: userId, content: journalText }]);
+    
+    const { error } = await supabase
+      .from('journals')
+      .insert([{ user_id: userId, content: journalText }]);
+
     if (!error) {
       setJournalText("");
       fetchHistory();
@@ -133,24 +148,28 @@ function JournalWindow({ isOpen, onClose, userId }: { isOpen: boolean; onClose: 
           {/* History Sidebar */}
           <div className="w-72 bg-[#F9F9F7] border-r border-gray-100 flex flex-col p-6">
             <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Journal History</h3>
+              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest">History</h3>
               <button 
                 onClick={startNewEntry}
                 className="p-2 bg-[#5F7A7B] text-white rounded-lg hover:bg-[#4A6364] transition-colors shadow-sm"
-                title="New Entry"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                 </svg>
               </button>
             </div>
+            
             <div className="flex-1 overflow-y-auto space-y-3 pr-2">
-              {history.map((entry) => (
-                <button key={entry.id} onClick={() => setJournalText(entry.content)} className="w-full text-left p-4 rounded-2xl bg-white border border-gray-50 hover:border-[#5F7A7B] transition-all group">
-                  <p className="text-[10px] text-[#5F7A7B] font-bold mb-1">{new Date(entry.created_at).toLocaleDateString()}</p>
-                  <p className="text-xs text-gray-500 line-clamp-2 leading-relaxed">{entry.content}</p>
-                </button>
-              ))}
+              {history.length > 0 ? (
+                history.map((entry) => (
+                  <button key={entry.id} onClick={() => setJournalText(entry.content)} className="w-full text-left p-4 rounded-2xl bg-white border border-gray-50 hover:border-[#5F7A7B] transition-all">
+                    <p className="text-[10px] text-[#5F7A7B] font-bold mb-1">{new Date(entry.created_at).toLocaleDateString()}</p>
+                    <p className="text-xs text-gray-500 line-clamp-2">{entry.content}</p>
+                  </button>
+                ))
+              ) : (
+                <p className="text-xs text-gray-400 italic text-center mt-10">No personal entries yet.</p>
+              )}
             </div>
           </div>
 
@@ -163,12 +182,16 @@ function JournalWindow({ isOpen, onClose, userId }: { isOpen: boolean; onClose: 
             <textarea 
               value={journalText}
               onChange={(e) => setJournalText(e.target.value)}
-              placeholder="What did you learn about yourself today?"
+              placeholder="What's on your mind?"
               className="flex-1 px-10 py-4 text-gray-700 outline-none resize-none bg-transparent font-light text-xl leading-relaxed"
             />
             <div className="p-8 border-t border-gray-50 flex justify-end">
-              <button onClick={saveJournal} disabled={isLoading || !journalText.trim()} className="px-10 py-3 bg-[#5F7A7B] text-white rounded-full text-sm font-medium hover:shadow-xl disabled:opacity-50 transition-all active:scale-95">
-                {isLoading ? "Remembering..." : "Save My Thoughts"}
+              <button 
+                onClick={saveJournal} 
+                disabled={isLoading || !journalText.trim()} 
+                className="px-10 py-3 bg-[#5F7A7B] text-white rounded-full text-sm font-medium hover:shadow-xl transition-all disabled:opacity-50"
+              >
+                {isLoading ? "Holding this for you..." : "Secure Reflection"}
               </button>
             </div>
           </div>
@@ -232,17 +255,16 @@ export default function Dashboard() {
         </header>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          <div className="md:col-span-2 bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm h-72 flex flex-col justify-between transition-all hover:shadow-md">
+          <div className="md:col-span-2 bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm h-72 flex flex-col justify-between">
             <h3 className="text-sm font-medium text-gray-600">Cognitive Trends</h3>
             <div className="flex items-end justify-between h-32 px-4 gap-2">
               {[40, 70, 45, 90, 65, 80, 50, 60, 85].map((h, i) => (
                 <div key={i} className="flex-1 bg-[#F0F4F4] rounded-full transition-all hover:bg-[#5F7A7B]" style={{ height: `${h}%` }}></div>
               ))}
             </div>
-            <p className="text-[10px] text-gray-400 uppercase tracking-tighter text-center">Weekly Cognitive Performance Index</p>
+            <p className="text-[10px] text-gray-400 uppercase tracking-tighter text-center">Weekly Index</p>
           </div>
 
-          {/* NEXT STEP FEATURE RE-ADDED */}
           <div className="bg-[#5F7A7B] p-8 rounded-[2.5rem] shadow-sm text-white flex flex-col justify-between">
             <h3 className="text-sm opacity-80 uppercase tracking-widest">Next Step</h3>
             <p className="text-xl font-light leading-snug">Complete your first Stroop assessment to baseline attention.</p>
@@ -258,7 +280,11 @@ export default function Dashboard() {
       </main>
 
       <ChatAssistant />
-      <JournalWindow isOpen={isJournalOpen} onClose={() => setIsJournalOpen(false)} userId={user?.id} />
+      <JournalWindow 
+        isOpen={isJournalOpen} 
+        onClose={() => setIsJournalOpen(false)} 
+        userId={user?.id} 
+      />
     </div>
   );
 }
