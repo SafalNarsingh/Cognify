@@ -118,14 +118,14 @@ export default function SignupPage() {
             <button 
               type="submit"
               disabled={loading}
-              className="w-full bg-[#5F7A7B] text-white py-3 rounded-xl hover:bg-[#4D6364] transition-colors mt-2 disabled:opacity-50"
+              className="w-full bg-[#5F7A7B] text-white py-3 rounded-xl hover:bg-[#4D6364] transition-colors mt-2 disabled:opacity-50 cursor-pointer"
             >
               {loading ? "Creating Account..." : "Continue"}
             </button>
           </form>
           
           <p className="text-center text-sm text-gray-500 mt-4">
-            Already have an account? <Link href="/auth" className="text-[#5F7A7B] hover:underline">Sign In</Link>
+            Already have an account? <Link href="/auth/login" className="text-[#5F7A7B] hover:underline">Sign In</Link>
           </p>
         </div>
       </div>
