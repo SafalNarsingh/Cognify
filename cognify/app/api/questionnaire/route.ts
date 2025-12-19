@@ -27,6 +27,7 @@ function classifySeverityPercent(pct: number): 'high' | 'moderate' | 'low' {
   return 'low';
 }
 
+
 export async function POST(req: NextRequest) {
   let body: { answers?: Answers } = {};
   try {
@@ -72,6 +73,24 @@ export async function POST(req: NextRequest) {
     );
 
   if (upsertErr) return NextResponse.json({ error: upsertErr.message }, { status: 500 });
+
+  const getConditionFromScores = (results: any) => {
+  if (!results) return "Analyzing...";
+  
+  const scores = [
+    { name: "Depressive Tendencies (PHQ-9)", score: results.phq9_score },
+    { name: "Anxiety Patterns (GAD-7)", score: results.gad7_score },
+    { name: "Attention/Executive Focus (ASRS)", score: results.asrs_score }
+  ];
+
+  // Sort to find the highest score
+  const topCondition = scores.sort((a, b) => b.score - a.score)[0];
+
+  // If all scores are very low (e.g., < 20%), return a general baseline
+  if (topCondition.score < 20) return "Healthy Baseline / General Wellness";
+  
+  return topCondition.name;
+  };
 
   return NextResponse.json({ success: true, data: payload }, { status: 200 });
 }

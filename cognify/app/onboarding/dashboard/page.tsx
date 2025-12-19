@@ -236,6 +236,7 @@ function JournalWindow({ isOpen, onClose, userId }: { isOpen: boolean; onClose: 
 export default function Dashboard() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
+  const [results, setResults] = useState<any>(null);
   const [isJournalOpen, setIsJournalOpen] = useState(false);
   const [isTaskOpen, setIsTaskOpen] = useState(false); // New state
 
@@ -244,15 +245,38 @@ export default function Dashboard() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
-  useEffect(() => {
-    const getUser = async () => {
-      const { data } = await supabase.auth.getUser();
-      if (!data.user) router.push('/auth/login');
-      else setUser(data.user);
+useEffect(() => {
+    const getData = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        router.push('/auth/login');
+        return;
+      }
+      setUser(user);
+
+      // Fetch the screening results
+      const { data } = await supabase
+        .from('result_q')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+      
+      setResults(data);
     };
-    getUser();
+    getData();
   }, [router, supabase]);
 
+  // Helper to get primary status string
+  const getStatus = () => {
+    if (!results) return "Profiling in progress";
+    const scores = [
+      { label: "Depression Risk", val: results.phq9_score },
+      { label: "Neurodivergence", val: results.srs_score },
+      { label: "Cognitive Risk", val: results.moca_score }
+    ];
+    const top = scores.sort((a, b) => b.val - a.val)[0];
+    return top.val > 15 ? top.label : "Baseline Stable";
+  };
   return (
     <div className="min-h-screen bg-[#F9F9F7] flex flex-col relative">
       <nav className="fixed left-0 right-0 z-50 flex justify-center px-6 bottom-5 md:bottom-auto md:top-6">
@@ -288,7 +312,7 @@ export default function Dashboard() {
           </div>
           <div className="bg-white/60 px-6 py-2 rounded-full border border-gray-100">
             <p className="text-[10px] text-gray-400 uppercase tracking-widest leading-none mb-1">Current Status</p>
-            <p className="text-[#5F7A7B] font-medium text-sm">Profiling in progress</p>
+            <p className="text-[#5F7A7B] font-medium text-sm">{getStatus()}</p>
           </div>
         </header>
 
@@ -313,7 +337,11 @@ export default function Dashboard() {
           <div onClick={() => setIsJournalOpen(true)} className="cursor-pointer">
             <MetricCard title="Journaling" value="+" sub="Tap to write entry" />
           </div>
-          <MetricCard title="Severity" value="P" sub="Pending Review" />
+          <MetricCard 
+            title="Severity" 
+            value={results ? results.phq9_severity.charAt(0).toUpperCase() : "P"} 
+            sub={results ? `${results.phq9_severity} Risk Detected` : "Pending Review"} 
+          />
 
         </div>
           <section className="mt-5 bg-white p-10 rounded-[2.5rem] border border-gray-100 shadow-sm flex flex-col sm:flex-row justify-between items-center gap-6">
