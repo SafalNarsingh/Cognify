@@ -1,12 +1,11 @@
-// app/auth/page.tsx
 "use client";
 import { useState } from 'react';
-import { signIn } from "next-auth/react";
 import Link from 'next/link';
 import congnifyLogo from '../../../public/cognify_logo.png';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../../lib/supabaseClient';
+import { createBrowserClient } from '@supabase/ssr';
 
 export default function AuthPage() {
   const [email, setEmail] = useState('');
@@ -15,6 +14,13 @@ export default function AuthPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const router = useRouter();
 
+  // Create the client inside the component or a separate lib file
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+
+  // EMAIL/PASSWORD SIGN IN
   const handleSignIn = async () => {
     setLoading(true);
     setErrorMsg(null);
@@ -39,34 +45,37 @@ export default function AuthPage() {
   }
   };
 
+    // GOOGLE LOGIN
   const handleGoogleLogin = async () => {
-    // This will point to your api/auth/google/route.ts
-    window.location.href = '/api/auth/google';
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        // REMOVED "/auth" from the middle to match your folder structure
+        redirectTo: `${window.location.origin}/callback?next=/onboarding/info`,
+      },
+    });
+
+    if (error) console.error(error);
   };
 
   return (
     <div className="min-h-screen bg-[#F9F9F7] flex flex-col">
       <div className="p-8 flex justify-center">
         <Link href="/" className="flex items-center space-x-2">
-          <Image
-              src={congnifyLogo}
-              alt="Cognify Logo"
-              width={300}
-              height={300}
-            />
+          <Image src={congnifyLogo} alt="Cognify Logo" width={200} height={200} priority />
         </Link>
       </div>
 
       <div className="flex-1 flex items-center justify-center px-6 pb-20">
         <div className="bg-white border border-gray-100 p-10 rounded-3xl shadow-sm w-full max-w-md">
-          <h2 className="text-2xl font-light text-center text-gray-800 mb-8">
-            Welcome Back
-          </h2>
+          <h2 className="text-2xl font-light text-center text-gray-800 mb-8">Welcome Back</h2>
 
           <div className="space-y-4">
-            {/* Social Login */}
-            <button onClick={() => signIn("google", { callbackUrl: "/onboarding/info" })} className="w-full flex items-center justify-center space-x-3 border border-gray-200 
-                             py-3 rounded-xl hover:bg-gray-50 transition-colors duration-200 cursor-pointer">
+            {/* FIXED: Changed from next-auth signIn to your handleGoogleLogin */}
+            <button 
+              onClick={handleGoogleLogin} 
+              className="w-full flex items-center justify-center space-x-3 border border-gray-200 py-3 rounded-xl hover:bg-gray-50 transition-all cursor-pointer"
+            >
               <img src="https://www.svgrepo.com/show/475656/google-color.svg" className="w-5 h-5" alt="Google" />
               <span className="text-gray-600 font-light">Continue with Google</span>
             </button>
@@ -78,42 +87,31 @@ export default function AuthPage() {
               </div>
             </div>
 
-            {/* Error Message Display */}
-            {errorMsg && (
-              <p className="text-red-500 text-sm text-center font-light">{errorMsg}</p>
-            )}
+            {errorMsg && <p className="text-red-500 text-xs text-center">{errorMsg}</p>}
 
             <div className="space-y-4">
               <input 
-                type="email" 
-                placeholder="Email Address" 
-                value={email}
+                type="email" placeholder="Email Address" value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl bg-[#F9F9F7] border border-transparent 
-                           focus:border-[#5F7A7B] focus:bg-white outline-none transition-all placeholder-gray-400"
+                className="w-full px-4 py-3 rounded-xl bg-[#F9F9F7] border border-transparent focus:border-[#5F7A7B] outline-none text-gray-500"
               />
               <input 
-                type="password" 
-                placeholder="Password" 
-                value={password}
+                type="password" placeholder="Password" value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl bg-[#F9F9F7] border border-transparent 
-                           focus:border-[#5F7A7B] focus:bg-white outline-none transition-all placeholder-gray-400"
+                className="w-full px-4 py-3 rounded-xl bg-[#F9F9F7] border border-transparent focus:border-[#5F7A7B] outline-none text-gray-500"
               />
             </div>
 
             <button 
               onClick={handleSignIn}
               disabled={loading}
-              className="w-full bg-[#5F7A7B] text-white py-3 rounded-xl mt-4 
-                             hover:shadow-md transition-shadow duration-200 disabled:opacity-50">
+              className="w-full bg-[#5F7A7B] text-white py-3 rounded-xl mt-4 hover:shadow-md disabled:opacity-50 transition-all"
+            >
               {loading ? 'Signing in...' : 'Sign In'}
             </button>
 
             <p className="text-center text-sm text-gray-500 mt-6">
-              New to Cognify? <Link href="/auth/signup" className="text-[#5F7A7B] hover:underline">
-                    Create account
-                </Link>
+              New to Cognify? <Link href="/auth/signup" className="text-[#5F7A7B] hover:underline">Create account</Link>
             </p>
           </div>
         </div>

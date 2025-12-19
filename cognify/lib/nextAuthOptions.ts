@@ -1,4 +1,4 @@
-import { supabase } from '../../../../lib/supabaseClient';
+import { supabase } from '../lib/supabaseClient';
 import type { NextAuthOptions, Session } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 
