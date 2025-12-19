@@ -6,7 +6,7 @@ import Link from 'next/link';
 import congnifyLogo from '../../../public/cognify_logo.png';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-
+import { supabase } from '../../../lib/supabaseClient';
 
 export default function AuthPage() {
   const [email, setEmail] = useState('');
@@ -20,25 +20,23 @@ export default function AuthPage() {
     setErrorMsg(null);
 
     try {
-      const response = await fetch('/api/auth/signin', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
 
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed to sign in');
-      }
-
-      // Successful login - redirect to onboarding
-      router.push('/onboarding/info');
-    } catch (err: any) {
-      setErrorMsg(err.message);
-    } finally {
-      setLoading(false);
+    if (error) {
+      throw new Error(error.message || 'Failed to sign in');
     }
+    console.log('Sign-in successful:', data);
+
+    // Successful login - redirect to onboarding
+    router.push('/onboarding/info');
+  } catch (err: any) {
+    setErrorMsg(err.message);
+  } finally {
+    setLoading(false);
+  }
   };
 
   const handleGoogleLogin = async () => {

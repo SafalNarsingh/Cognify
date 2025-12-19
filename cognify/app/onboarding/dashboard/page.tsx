@@ -1,11 +1,11 @@
 // app/page.tsx
 "use client";
 import Link from 'next/link';
-import congnifyLogo from '../public/cognify_logo.png';
+import congnifyLogo from '../../../public/cognify_logo.png';
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '../lib/supabaseClient';
+// import { supabase } from '../lib/supabaseClient';
 
 export default function LandingPage() {
 
