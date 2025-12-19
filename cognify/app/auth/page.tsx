@@ -92,7 +92,7 @@ export default function AuthPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full px-4 py-3 rounded-xl bg-[#F9F9F7] border border-transparent 
-                           focus:border-[#5F7A7B] focus:bg-white outline-none transition-all"
+                           focus:border-[#5F7A7B] focus:bg-white outline-none transition-all placeholder-gray-400"
               />
               <input 
                 type="password" 
@@ -100,7 +100,7 @@ export default function AuthPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full px-4 py-3 rounded-xl bg-[#F9F9F7] border border-transparent 
-                           focus:border-[#5F7A7B] focus:bg-white outline-none transition-all"
+                           focus:border-[#5F7A7B] focus:bg-white outline-none transition-all placeholder-gray-400"
               />
             </div>
 
