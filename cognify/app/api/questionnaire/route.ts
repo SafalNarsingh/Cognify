@@ -18,11 +18,10 @@ function normalizedAverage(ids: string[], answers: Answers): number {
   const totalMax = ids.length * maxPerQ;
   if (totalMax === 0) return 0;
   const sum = ids.reduce((acc, id) => acc + optionToScore(answers[id] ?? ''), 0);
-  return Math.max(0, Math.min(1, sum / totalMax)); // 0..1
+  return Math.max(0, Math.min(1, sum / totalMax));
 }
 
 function classifySeverityPercent(pct: number): 'high' | 'moderate' | 'low' {
-  // pct: 0..100
   if (pct > 65) return 'high';
   if (pct >= 35 && pct <= 65) return 'moderate';
   return 'low';
@@ -37,54 +36,42 @@ export async function POST(req: NextRequest) {
   }
 
   const answers = body.answers ?? {};
-  // Group by prefixes from your questionnaire IDs
-  const phqIds = Object.keys(answers).filter(k => k.startsWith('mh_')); // PHQ-9
-  const gadIds = Object.keys(answers).filter(k => k.startsWith('ed_')); // GAD-7
-  const asrsIds = Object.keys(answers).filter(k => k.startsWith('nd_')); // ASRS
+  
+  // Filtering for the three target assessments
+  const phqIds = Object.keys(answers).filter(k => k.startsWith('mh_'));   // PHQ-9
+  const srsIds = Object.keys(answers).filter(k => k.startsWith('asd_'));  // SRS
+  const mocaIds = Object.keys(answers).filter(k => k.startsWith('eld_')); // MoCA
 
-  const phqNorm = normalizedAverage(phqIds, answers);
-  const gadNorm = normalizedAverage(gadIds, answers);
-  const asrsNorm = normalizedAverage(asrsIds, answers);
-
-  // Convert to integer percentage 0..100 for int4 columns
-  const phq9_score = Math.round(phqNorm * 100);
-  const gad7_score = Math.round(gadNorm * 100);
-  const asrs_score = Math.round(asrsNorm * 100);
+  const phqScore = Math.round(normalizedAverage(phqIds, answers) * 100);
+  const srsScore = Math.round(normalizedAverage(srsIds, answers) * 100);
+  const mocaScore = Math.round(normalizedAverage(mocaIds, answers) * 100);
 
   const payload = {
-    phq9_score,
-    phq9_severity: classifySeverityPercent(phq9_score),
-    gad7_score,
-    gad7_severity: classifySeverityPercent(gad7_score),
-    asrs_score,
-    asrs_severity: classifySeverityPercent(asrs_score),
-    // mmse/ran/srs left null unless you send them in later flows
+    phq9_score: phqScore,
+    phq9_severity: classifySeverityPercent(phqScore),
+    srs_score: srsScore,
+    srs_severity: classifySeverityPercent(srsScore),
+    moca_score: mocaScore,
+    moca_severity: classifySeverityPercent(mocaScore),
   };
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll: () => req.cookies.getAll(),
-        setAll: () => {},
-      },
-    }
+    { cookies: { getAll: () => req.cookies.getAll(), setAll: () => {} } }
   );
 
   const { data: { user }, error: userErr } = await supabase.auth.getUser();
-  if (userErr || !user) {
-    return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
-  }
+  if (userErr || !user) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
 
-  const upsertData = { user_id: user.id, ...payload };
   const { error: upsertErr } = await supabase
-    .from('questionnaire_results')
-    .upsert(upsertData, { onConflict: 'user_id' });
+    .from('result_q')
+    .upsert(
+      { user_id: user.id, ...payload, updated_at: new Date().toISOString() }, 
+      { onConflict: 'user_id' }
+    );
 
-  if (upsertErr) {
-    return NextResponse.json({ error: upsertErr.message }, { status: 500 });
-  }
+  if (upsertErr) return NextResponse.json({ error: upsertErr.message }, { status: 500 });
 
-  return NextResponse.json({ success: true, data: upsertData }, { status: 200 });
+  return NextResponse.json({ success: true, data: payload }, { status: 200 });
 }
