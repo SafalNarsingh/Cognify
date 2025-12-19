@@ -5,11 +5,14 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import congnifyLogo from "../../../public/cognify_logo.png";
-import { supabase } from "../../../lib/supabaseClient";
+import { createBrowserClient } from "@supabase/ssr";
 
 export default function UserInfoPage() {
   const router = useRouter();
-
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
   const [fullName, setFullName] = useState("");
   const [age, setAge] = useState<string>("");
   const [gender, setGender] = useState("");

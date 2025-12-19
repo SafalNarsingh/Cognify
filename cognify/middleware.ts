@@ -16,15 +16,18 @@ export async function middleware(request: NextRequest) {
         getAll() {
           return request.cookies.getAll();
         },
-        setAll(cookiesToSet) {
+       setAll(cookiesToSet) {
+          // 1. Update the request cookies so the current execution sees them
           cookiesToSet.forEach(({ name, value }) =>
             request.cookies.set(name, value)
           );
+          // 2. ONLY set the response once
           response = NextResponse.next({
             request: {
               headers: request.headers,
             },
           });
+          // 3. Set the cookies on the new response
           cookiesToSet.forEach(({ name, value, options }) =>
             response.cookies.set(name, value, options)
           );
