@@ -46,23 +46,23 @@ export default function AuthPage() {
                 type="email" 
                 placeholder="Email Address" 
                 className="w-full px-4 py-3 rounded-xl bg-[#F9F9F7] border border-transparent 
-                           focus:border-[#5F7A7B] focus:bg-white outline-none transition-all"
+                           focus:border-[#5F7A7B] focus:bg-white outline-none transition-all placeholder-gray-400"
               />
               <input 
                 type="password" 
                 placeholder="Password" 
                 className="w-full px-4 py-3 rounded-xl bg-[#F9F9F7] border border-transparent 
-                           focus:border-[#5F7A7B] focus:bg-white outline-none transition-all"
+                           focus:border-[#5F7A7B] focus:bg-white outline-none transition-all placeholder-gray-400"
               />
             </div>
 
             <button className="w-full bg-[#5F7A7B] text-white py-3 rounded-xl mt-4 
-                             hover:shadow-md transition-shadow duration-200">
+                             hover:shadow-md transition-shadow duration-200 placeholder-gray-700" >
               <Link href='../onboarding/info/'>Sign In</Link>
             </button>
 
             <p className="text-center text-sm text-gray-500 mt-6">
-              New to Cognify? <button className="text-[#5F7A7B] hover:underline">
+              New to Cognify? <button className="text-[#96bcfa] hover:underline">
                 <Link href="/auth/signup">
                     Create account
                 </Link>

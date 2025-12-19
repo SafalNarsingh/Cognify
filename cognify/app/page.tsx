@@ -25,9 +25,9 @@ export default function LandingPage() {
 
         {/* Action Button */}
         <Link href="/auth">
-          <button className="mt-8 px-10 py-3 bg-[#000000] text-white rounded-full 
+          <button className="mt-8 px-10 py-3 bg-[#5F7A7B] text-white rounded-full 
                            hover:bg-[#4D6364] transition-all duration-300 
-                           font-medium tracking-wide shadow-sm">
+                           font-medium tracking-wide shadow-sm cursor-pointer">
             Begin Journey
           </button>
         </Link>
