@@ -1,16 +1,20 @@
 // app/auth/page.tsx
 import Link from 'next/link';
+import congnifyLogo from '../../public/cognify_logo.png';
+import Image from 'next/image';
 
 export default function AuthPage() {
   return (
     <div className="min-h-screen bg-[#F9F9F7] flex flex-col">
       {/* Top Corner Logo */}
-      <div className="p-8">
+      <div className="p-8 flex justify-center">
         <Link href="/" className="flex items-center space-x-2">
-          <div className="w-8 h-8 bg-[#5F7A7B] rounded-lg flex items-center justify-center text-white text-sm">
-            C
-          </div>
-          <span className="text-xl font-light text-gray-800">Cognify</span>
+          <Image
+              src={congnifyLogo}
+              alt="Description of the image" // 'alt' prop is required
+              width={300} // Optional, but recommended for explicit sizing
+              height={300} // Optional, but recommended for explicit sizing
+            />
         </Link>
       </div>
 
