@@ -7,6 +7,8 @@ import Image from 'next/image';
 import { motion, AnimatePresence, useAnimation } from 'framer-motion';
 import congnifyLogo from '../../../public/cognify_logo.png';
 
+type ChatMessage = { role: 'user' | 'model'; content: string };
+
 // --- CHAT ASSISTANT COMPONENT ---
 function ChatAssistant() {
   const [isOpen, setIsOpen] = useState(false);
@@ -14,9 +16,19 @@ function ChatAssistant() {
   const controls = useAnimation();
   const isDragging = useRef(false);
 
+  // Chat state
+  const [history, setHistory] = useState<ChatMessage[]>([]);
+  const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(false);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+
+  const apiBase = 'http://localhost:8000';
+
   const toggleChat = () => {
     if (!isDragging.current) setIsOpen(!isOpen);
   };
+
+
 
   const handleDragStart = () => { isDragging.current = false; };
   const handleDrag = () => {
@@ -38,6 +50,63 @@ function ChatAssistant() {
       y: targetY,
       transition: { type: "spring", stiffness: 400, damping: 30 }
     });
+  };
+
+   const sendMessage = async () => {
+    const text = input.trim();
+    if (!text || loading) return;
+
+    setLoading(true);
+    setInput('');
+
+    try {
+      const res = await fetch(`${apiBase}/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text,
+          history, // [{role:'user'|'model', content:'...'}]
+        }),
+      });
+
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        console.error('Chat API error:', json?.detail || json);
+        // Optimistically append the user message so it’s visible, even on error
+        setHistory((h) => [...h, { role: 'user', content: text }]);
+        return;
+      }
+
+      // API returns { response, history: [...existing, user, model] }
+      if (Array.isArray(json?.history)) {
+        setHistory(json.history as ChatMessage[]);
+      } else {
+        // Fallback if only response is returned
+        setHistory((h) => [
+          ...h,
+          { role: 'user', content: text },
+          { role: 'model', content: String(json?.response ?? '') },
+        ]);
+      }
+    } catch (e) {
+      console.error('Chat request failed:', e);
+      setHistory((h) => [...h, { role: 'user', content: text }]);
+    } finally {
+      setLoading(false);
+      // Scroll to bottom after update
+      requestAnimationFrame(() => {
+        if (scrollRef.current) {
+          scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+        }
+      });
+    }
+  };
+
+    const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      sendMessage();
+    }
   };
 
   return (
@@ -76,9 +145,36 @@ function ChatAssistant() {
                 <span className="text-sm font-medium text-gray-800">Assistant</span>
                 <button onClick={() => setIsOpen(false)} className="text-gray-400 p-2">&times;</button>
               </div>
-              <div className="flex-1 p-4 text-xs text-gray-400 italic">How can I help you today?</div>
+              {/* Messages area: preserves existing container classes */}
+              <div ref={scrollRef} className="flex-1 p-4 text-xs text-gray-400 italic overflow-y-auto">
+                {history.length === 0 && !loading && (
+                  <div>How can I help you today?</div>
+                )}
+                {history.length > 0 && (
+                  <div className="space-y-2 not-italic text-gray-600">
+                    {history.map((m, idx) => (
+                      <div key={idx}>
+                        <span className="uppercase text-[10px] tracking-widest text-gray-400">
+                          {m.role === 'user' ? 'You' : 'Assistant'}
+                        </span>
+                        <div className="mt-0.5">{m.content}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {loading && <div className="mt-2 text-gray-400 italic">Assistant is typing…</div>}
+              </div>
+
               <div className="p-4 border-t border-gray-50">
-                <input type="text" placeholder="Ask me anything..." className="w-full bg-[#F9F9F7] px-4 py-2 rounded-xl text-xs outline-none" />
+                <input
+                  type="text"
+                  placeholder="Ask me anything..."
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={onKeyDown}
+                  disabled={loading}
+                  className="w-full bg-[#F9F9F7] px-4 py-2 rounded-xl text-xs outline-none"
+                />
               </div>
             </motion.div>
           )}
