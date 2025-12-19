@@ -107,7 +107,7 @@ export default function AuthPage() {
             <button 
               onClick={handleSignIn}
               disabled={loading}
-              className="w-full bg-[#5F7A7B] text-white py-3 rounded-xl mt-4 hover:shadow-md disabled:opacity-50 transition-all"
+              className="w-full bg-[#5F7A7B] text-white py-3 rounded-xl mt-4 hover:shadow-md disabled:opacity-50 transition-all cursor-pointer"
             >
               {loading ? 'Signing in...' : 'Sign In'}
             </button>

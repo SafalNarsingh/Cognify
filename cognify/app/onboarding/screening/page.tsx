@@ -1,7 +1,12 @@
 "use client";
 import { useState } from 'react';
 import Image from 'next/image';
+<<<<<<< HEAD
 import { useRouter } from 'next/navigation';
+=======
+import { useRouter } from 'next/navigation'; // Changed from Link
+import { createBrowserClient } from '@supabase/ssr';
+>>>>>>> 356814b34aae52ecb09eaf5ffea78b5dd46fe878
 import congnifyLogo from '../../../public/cognify_logo.png';
 import { screeningData } from '../../components/screeningData';
 
@@ -10,6 +15,12 @@ export default function ScreeningPage() {
   const [step, setStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
 
   const currentData = screeningData[step];
   const progress = ((step + 1) / screeningData.length) * 100;
@@ -42,6 +53,7 @@ export default function ScreeningPage() {
     if (step > 0) setStep(step - 1);
   };
 
+<<<<<<< HEAD
   const handleComplete = async () => {
     if (submitting) return;
     setSubmitting(true);
@@ -64,6 +76,18 @@ export default function ScreeningPage() {
       setSubmitting(false);
       router.push('/onboarding/dashboard');
     }
+=======
+  // HANDLES THE TRANSITION TO PROFILING
+  const handleComplete = async () => {
+    setIsSubmitting(true);
+    
+    // Logic to save answers to Supabase would go here
+    // const { data: { user } } = await supabase.auth.getUser();
+    // await supabase.from('screening_results').upsert({ id: user.id, answers });
+
+    // Move to the next phase of onboarding
+    router.push('/onboarding/profiling');
+>>>>>>> 356814b34aae52ecb09eaf5ffea78b5dd46fe878
   };
 
   return (
@@ -92,7 +116,11 @@ export default function ScreeningPage() {
             <h2 className="text-2xl font-light text-gray-800">{currentData.description}</h2>
             <p className="text-sm text-gray-500 font-light mt-1">Select the best description. Double-click to deselect.</p>
           </div>
+<<<<<<< HEAD
           <button
+=======
+          <button 
+>>>>>>> 356814b34aae52ecb09eaf5ffea78b5dd46fe878
             onClick={handleClearSection}
             className="text-sm text-gray-400 hover:text-white transition-colors border border-gray-200 hover:bg-[#5F7A7B] rounded-full px-4 py-2"
           >
@@ -121,7 +149,11 @@ export default function ScreeningPage() {
           </div>
         ))}
 
+<<<<<<< HEAD
         <div className="flex justify-between items-center pt-10">
+=======
+        <div className="flex justify-between items-center pt-3">
+>>>>>>> 356814b34aae52ecb09eaf5ffea78b5dd46fe878
           <button
             onClick={prevStep}
             disabled={step === 0}
@@ -132,12 +164,21 @@ export default function ScreeningPage() {
           </button>
 
           {step === screeningData.length - 1 ? (
+<<<<<<< HEAD
             <button
               onClick={handleComplete}
               disabled={submitting}
               className="px-10 py-3 bg-[#5F7A7B] text-white rounded-xl font-medium shadow-sm hover:bg-[#4D6364] transition-all cursor-pointer disabled:opacity-60"
             >
               {submitting ? 'Saving…' : 'Complete Assessment'}
+=======
+            <button 
+              onClick={handleComplete}
+              disabled={isSubmitting}
+              className="px-10 py-3 bg-[#5F7A7B] text-white rounded-xl font-medium shadow-sm hover:bg-[#4D6364] transition-all cursor-pointer disabled:opacity-50"
+            >
+              {isSubmitting ? "Processing..." : "Complete Assessment"}
+>>>>>>> 356814b34aae52ecb09eaf5ffea78b5dd46fe878
             </button>
           ) : (
             <button

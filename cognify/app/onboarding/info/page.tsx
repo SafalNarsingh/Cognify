@@ -108,14 +108,14 @@ export default function UserInfoPage() {
     <div className="min-h-screen bg-[#F9F9F7] flex flex-col items-center py-12 px-6">
       <div className="w-full max-w-xl space-y-8">
         <div className="flex flex-col items-center text-center">
-          <Image src={congnifyLogo} alt="Cognify Logo" width={200} height={200} className="mb-4" />
+          <Image src={congnifyLogo} alt="Cognify Logo" width={150} height={150} className="mb-4" />
           <h1 className="text-3xl font-light text-gray-800 tracking-tight">Personal Profile</h1>
           <p className="text-gray-500 mt-2 font-light">
             Helping us tailor your journey to your unique needs.
           </p>
         </div>
 
-        <div className="bg-white p-10 rounded-3xl border border-gray-100 shadow-sm space-y-8">
+        <div className="bg-white p-10 rounded-3xl border border-gray-100 shadow-sm  flex flex-col">
           {errorMsg && (
             <p className="text-red-500 text-sm text-center font-light">{errorMsg}</p>
           )}
@@ -127,7 +127,7 @@ export default function UserInfoPage() {
               placeholder="e.g. John Doe"
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl bg-[#F9F9F7] border-none focus:ring-1 focus:ring-[#5F7A7B] outline-none placeholder-gray-400"
+              className="w-full px-4 py-3 rounded-xl bg-[#F9F9F7] border-none focus:ring-1 focus:ring-[#5F7A7B] outline-none placeholder-gray-400 text-gray-500"
             />
           </div>
 
@@ -139,7 +139,7 @@ export default function UserInfoPage() {
                 placeholder="Years"
                 value={age}
                 onChange={(e) => setAge(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl bg-[#F9F9F7] border-none focus:ring-1 focus:ring-[#5F7A7B] outline-none placeholder-gray-400"
+                className="w-full px-4 py-3 rounded-xl bg-[#F9F9F7] border-none focus:ring-1 focus:ring-[#5F7A7B] outline-none placeholder-gray-400 text-gray-500"
               />
               <p className="text-[10px] text-gray-400 leading-tight">
                 Used for age-specific screenings (e.g., child vs. adult tools).
@@ -170,7 +170,7 @@ export default function UserInfoPage() {
               rows={2}
               value={priorMentalHealth}
               onChange={(e) => setPriorMentalHealth(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl bg-[#F9F9F7] border-none focus:ring-1 focus:ring-[#5F7A7B] outline-none resize-none placeholder-gray-400"
+              className="w-full px-4 py-3 rounded-xl bg-[#F9F9F7] border-none focus:ring-1 focus:ring-[#5F7A7B] outline-none resize-none placeholder-gray-400 text-gray-500"
             />
             <p className="text-[10px] text-gray-400 leading-tight">
               Informs initial profiling and specific task recommendations (e.g., Flanker vs. Stroop).
@@ -184,7 +184,7 @@ export default function UserInfoPage() {
               rows={2}
               value={dailyRoutine}
               onChange={(e) => setDailyRoutine(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl bg-[#F9F9F7] border-none focus:ring-1 focus:ring-[#5F7A7B] outline-none resize-none placeholder-gray-400"
+              className="w-full px-4 py-3 rounded-xl bg-[#F9F9F7] border-none focus:ring-1 focus:ring-[#5F7A7B] outline-none resize-none placeholder-gray-400 text-gray-500"
             />
             <p className="text-[10px] text-gray-400 leading-tight">
               Contextualizes journaling prompts and integrates relevant work/life stressors.
@@ -195,7 +195,7 @@ export default function UserInfoPage() {
             <button
               onClick={handleSaveAndContinue}
               disabled={saving}
-              className="w-full bg-[#5F7A7B] text-white py-4 rounded-xl hover:bg-[#4D6364] transition-all font-medium cursor-pointer disabled:opacity-60"
+              className="w-full bg-[#5F7A7B] text-white py-4 rounded-xl hover:bg-[#4D6364] transition-all font-medium cursor-pointer disabled:opacity-60  "
             >
               {saving ? "Saving..." : "Continue to Screening"}
             </button>
