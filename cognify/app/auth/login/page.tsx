@@ -32,14 +32,36 @@ export default function AuthPage() {
       email,
       password,
     });
-
     if (error) {
       throw new Error(error.message || 'Failed to sign in');
     }
-    console.log('Sign-in successful:', data);
+    const { data: auth } = await supabase.auth.getUser();
+    const user = auth?.user;
+    if (!user) throw new Error('No authenticated user after sign-in');
 
+    console.log('Sign-in successful:', data);
+    // Check onboarding completion flag
+      const { data: profile, error: profileErr } = await supabase
+        .from('user_profile')
+        .select('onboarding_completed')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (profileErr) {
+        // If profile missing or query fails, send to info to create it
+        console.warn('Profile fetch failed:', profileErr.message);
+        router.push('/onboarding/info');
+        return;
+      }
+
+      // Centralized redirect decision
+      if (profile?.onboarding_completed) {
+        router.push('/onboarding/dashboard');
+      } else {
+        router.push('/onboarding/info');
+      }
     // Successful login - redirect to onboarding
-    router.push('/onboarding/info');
+    // router.push('/onboarding/info');
   } catch (err: any) {
     setErrorMsg(err.message);
   } finally {

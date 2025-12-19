@@ -1,12 +1,8 @@
 "use client";
 import { useState } from 'react';
 import Image from 'next/image';
-<<<<<<< HEAD
-import { useRouter } from 'next/navigation';
-=======
 import { useRouter } from 'next/navigation'; // Changed from Link
 import { createBrowserClient } from '@supabase/ssr';
->>>>>>> 356814b34aae52ecb09eaf5ffea78b5dd46fe878
 import congnifyLogo from '../../../public/cognify_logo.png';
 import { screeningData } from '../../components/screeningData';
 
@@ -53,7 +49,6 @@ export default function ScreeningPage() {
     if (step > 0) setStep(step - 1);
   };
 
-<<<<<<< HEAD
   const handleComplete = async () => {
     if (submitting) return;
     setSubmitting(true);
@@ -68,6 +63,28 @@ export default function ScreeningPage() {
         const err = await res.json().catch(() => ({}));
         console.error('Failed to save questionnaire_result:', err);
       }
+   
+      // Mark onboarding as completed on the client after screening finishes
+      const { data: auth } = await supabase.auth.getUser();
+      const user = auth?.user;
+      if (!user) {
+        router.replace('/auth/login');
+        return;
+      }
+
+      const { error: profileErr } = await supabase
+        .from('user_profile')
+        .upsert(
+          { user_id: user.id, onboarding_completed: true, updated_at: new Date().toISOString() },
+          { onConflict: 'user_id' }
+        );
+
+      if (profileErr) {
+        console.warn('Failed to set onboarding_completed:', profileErr.message);
+      }
+
+    // Success → go to dashboard
+    router.push('/onboarding/dashboard');
       console.log('API: ', res);
       console.log('Answer:', answers);
     } catch (e) {
@@ -76,18 +93,6 @@ export default function ScreeningPage() {
       setSubmitting(false);
       router.push('/onboarding/dashboard');
     }
-=======
-  // HANDLES THE TRANSITION TO PROFILING
-  const handleComplete = async () => {
-    setIsSubmitting(true);
-    
-    // Logic to save answers to Supabase would go here
-    // const { data: { user } } = await supabase.auth.getUser();
-    // await supabase.from('screening_results').upsert({ id: user.id, answers });
-
-    // Move to the next phase of onboarding
-    router.push('/onboarding/profiling');
->>>>>>> 356814b34aae52ecb09eaf5ffea78b5dd46fe878
   };
 
   return (
@@ -116,11 +121,7 @@ export default function ScreeningPage() {
             <h2 className="text-2xl font-light text-gray-800">{currentData.description}</h2>
             <p className="text-sm text-gray-500 font-light mt-1">Select the best description. Double-click to deselect.</p>
           </div>
-<<<<<<< HEAD
-          <button
-=======
           <button 
->>>>>>> 356814b34aae52ecb09eaf5ffea78b5dd46fe878
             onClick={handleClearSection}
             className="text-sm text-gray-400 hover:text-white transition-colors border border-gray-200 hover:bg-[#5F7A7B] rounded-full px-4 py-2"
           >
@@ -149,11 +150,7 @@ export default function ScreeningPage() {
           </div>
         ))}
 
-<<<<<<< HEAD
-        <div className="flex justify-between items-center pt-10">
-=======
         <div className="flex justify-between items-center pt-3">
->>>>>>> 356814b34aae52ecb09eaf5ffea78b5dd46fe878
           <button
             onClick={prevStep}
             disabled={step === 0}
@@ -164,21 +161,12 @@ export default function ScreeningPage() {
           </button>
 
           {step === screeningData.length - 1 ? (
-<<<<<<< HEAD
             <button
               onClick={handleComplete}
               disabled={submitting}
               className="px-10 py-3 bg-[#5F7A7B] text-white rounded-xl font-medium shadow-sm hover:bg-[#4D6364] transition-all cursor-pointer disabled:opacity-60"
             >
               {submitting ? 'Saving…' : 'Complete Assessment'}
-=======
-            <button 
-              onClick={handleComplete}
-              disabled={isSubmitting}
-              className="px-10 py-3 bg-[#5F7A7B] text-white rounded-xl font-medium shadow-sm hover:bg-[#4D6364] transition-all cursor-pointer disabled:opacity-50"
-            >
-              {isSubmitting ? "Processing..." : "Complete Assessment"}
->>>>>>> 356814b34aae52ecb09eaf5ffea78b5dd46fe878
             </button>
           ) : (
             <button

@@ -7,14 +7,47 @@ export type ScreeningSection = {
 
 export const screeningData: ScreeningSection[] = [
   {
-    category: "Mental Health", // PHQ-9
-    description: "Mood and Emotional Well-being",
-    questions: [
-      { id: "mh_1", text: "Little interest or pleasure in doing things you used to enjoy?" },
-      { id: "mh_2", text: "Feeling nervous, anxious, or on edge more often than usual?" },
-      { id: "mh_3", text: "Trouble falling or staying asleep, or sleeping too much?" }
-    ]
-  },
+  category: "Mental Health", // PHQ-9
+  description: "Mood and Emotional Well-being",
+  questions: [
+    { 
+      id: "mh_1", 
+      text: "Little interest or pleasure in doing things?" 
+    },
+    { 
+      id: "mh_2", 
+      text: "Feeling down, depressed, or hopeless?" 
+    },
+    { 
+      id: "mh_3", 
+      text: "Trouble falling or staying asleep, or sleeping too much?" 
+    },
+    { 
+      id: "mh_4", 
+      text: "Feeling tired or having little energy?" 
+    },
+    { 
+      id: "mh_5", 
+      text: "Poor appetite or overeating?" 
+    },
+    { 
+      id: "mh_6", 
+      text: "Feeling bad about yourself — or that you are a failure or have let yourself or your family down?" 
+    },
+    { 
+      id: "mh_7", 
+      text: "Trouble concentrating on things, such as reading the newspaper or watching television?" 
+    },
+    { 
+      id: "mh_8", 
+      text: "Moving or speaking so slowly that other people could have noticed? Or the opposite — being so fidgety or restless that you have been moving around a lot more than usual?" 
+    },
+    { 
+      id: "mh_9", 
+      text: "Thoughts that you would be better off dead or of hurting yourself in some way?" 
+    }
+  ]
+},
   {
     category: "Elderly & Neuro-degenerative", // GAD-7
     description: "Cognitive Decline and Motor Control",
