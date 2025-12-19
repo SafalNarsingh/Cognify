@@ -17,13 +17,13 @@ export default function UserInfoPage() {
             <div className="space-y-2">
             <label className="text-sm text-gray-400 ml-1">Full Name</label>
             <input type="text" placeholder="e.g. John Doe" 
-              className="w-full px-4 py-3 rounded-xl bg-[#F9F9F7] border-none focus:ring-1 focus:ring-[#5F7A7B] outline-none placeholder-gray-400" />
+              className="w-full px-4 py-3 rounded-xl bg-[#F9F9F7] border-none focus:ring-1 focus:ring-[#5F7A7B] outline-none placeholder-gray-400 text-gray-500" />
           </div>    
           {/* Age & Gender Row */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-600">Age</label>
-              <input type="number" placeholder="Years" className="w-full px-4 py-3 rounded-xl bg-[#F9F9F7] border-none focus:ring-1 focus:ring-[#5F7A7B] outline-none placeholder-gray-400" />
+              <input type="number" placeholder="Years" className="w-full px-4 py-3 rounded-xl bg-[#F9F9F7] border-none focus:ring-1 focus:ring-[#5F7A7B] outline-none placeholder-gray-400 text-gray-500" />
               <p className="text-[10px] text-gray-400 leading-tight">Used for age-specific screenings (e.g., child vs. adult tools).</p>
             </div>
             <div className="space-y-2">
