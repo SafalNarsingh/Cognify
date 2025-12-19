@@ -1,10 +1,12 @@
-"use client"; // Required for useState and event handling
-
+// app/auth/page.tsx
+"use client";
 import { useState } from 'react';
+import { signIn } from "next-auth/react";
 import Link from 'next/link';
-import congnifyLogo from '../../public/cognify_logo.png';
+import congnifyLogo from '../../../public/cognify_logo.png';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+
 
 export default function AuthPage() {
   const [email, setEmail] = useState('');
@@ -64,11 +66,9 @@ export default function AuthPage() {
           </h2>
 
           <div className="space-y-4">
-            {/* Google Login Button */}
-            <button 
-              onClick={handleGoogleLogin}
-              className="w-full flex items-center justify-center space-x-3 border border-gray-200 
-                             py-3 rounded-xl hover:bg-gray-50 transition-colors duration-200">
+            {/* Social Login */}
+            <button onClick={() => signIn("google", { callbackUrl: "/onboarding/info" })} className="w-full flex items-center justify-center space-x-3 border border-gray-200 
+                             py-3 rounded-xl hover:bg-gray-50 transition-colors duration-200 cursor-pointer">
               <img src="https://www.svgrepo.com/show/475656/google-color.svg" className="w-5 h-5" alt="Google" />
               <span className="text-gray-600 font-light">Continue with Google</span>
             </button>
