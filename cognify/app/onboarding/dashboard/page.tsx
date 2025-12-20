@@ -4,31 +4,20 @@ import { useEffect, useState, useRef } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { motion, AnimatePresence, useAnimation } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import congnifyLogo from '../../../public/cognify_logo.png';
+import { MindfulnessWindow } from '@/app/components/Mindfulness';
+
 type ChatMessage = { role: 'user' | 'model'; content: string };
 
 const toText = (c: any): string => {
   if (c == null) return '';
   if (typeof c === 'string') return c;
   if (Array.isArray(c)) {
-    // LangChain / OpenAI content parts
-    const parts = c.map((p: any) => {
-      if (typeof p === 'string') return p;
-      if (typeof p?.text === 'string') return p.text;
-      if (p?.type === 'text' && typeof p?.text === 'string') return p.text;
-      if (typeof p?.content === 'string') return p.content;
-      return '';
-    }).filter(Boolean);
-    return parts.join('\n').trim() || JSON.stringify(c);
+    const parts = c.map((p: any) => p?.text || p?.content || (typeof p === 'string' ? p : '')).filter(Boolean);
+    return parts.join('\n').trim();
   }
-  if (typeof c === 'object') {
-    if (typeof c.text === 'string') return c.text;
-    if (typeof c.message === 'string') return c.message;
-    // last resort
-    return JSON.stringify(c);
-  }
-  return String(c);
+  return c.text || c.message || JSON.stringify(c);
 };
 
 const normalizeMessage = (msg: any): ChatMessage => {
@@ -39,7 +28,162 @@ const normalizeMessage = (msg: any): ChatMessage => {
       : 'user';
   return { role, content: toText(msg.content) };
 };
-// --- TASK WINDOW COMPONENT ---
+
+// --- TYPEWRITER COMPONENT ---
+function TypewriterMessage({ text }: { text: string }) {
+  const [displayedText, setDisplayedText] = useState("");
+  
+  useEffect(() => {
+    let i = 0;
+    const interval = setInterval(() => {
+      setDisplayedText(text.slice(0, i));
+      i++;
+      if (i > text.length) clearInterval(interval);
+    }, 15);
+    return () => clearInterval(interval);
+  }, [text]);
+
+  return <div className="whitespace-pre-wrap">{displayedText}</div>;
+}
+
+// --- CHAT ASSISTANT COMPONENT ---
+function ChatAssistant() {
+  const [isOpen, setIsOpen] = useState(false);
+  const [isFullScreen, setIsFullScreen] = useState(false);
+  const [history, setHistory] = useState<ChatMessage[]>([]);
+  const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(false);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [history, loading]);
+
+  const sendMessage = async () => {
+    const text = input.trim();
+    if (!text || loading) return;
+    
+    setLoading(true);
+    setInput('');
+    const newHistory: ChatMessage[] = [...history, { role: 'user', content: text }];
+    setHistory(newHistory);
+
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, history: newHistory }),
+      });
+      const json = await res.json();
+      
+      const assistantText = toText(json?.response ?? json);
+      setHistory([...newHistory, { role: 'model', content: assistantText }]);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <>
+      <style>{`
+        @keyframes medicalBounce {
+          0%, 80%, 100% { transform: translateY(0); }
+          40% { transform: translateY(-6px); }
+        }
+        .dot {
+          width: 4px;
+          height: 4px;
+          background-color: #5F7A7B;
+          border-radius: 50%;
+          display: inline-block;
+          animation: medicalBounce 1.4s infinite ease-in-out both;
+        }
+        .dot:nth-child(1) { animation-delay: -0.32s; }
+        .dot:nth-child(2) { animation-delay: -0.16s; }
+      `}</style>
+
+      {!isOpen && (
+        <button onClick={() => setIsOpen(true)} className="fixed bottom-6 right-6 p-4 bg-gradient-to-br from-[#5F7A7B] to-[#4D6364] text-white rounded-full shadow-lg hover:scale-110 transition-all z-[60]">
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
+        </button>
+      )}
+
+      {isOpen && (
+        <div className={`fixed transition-all duration-500 z-[60] bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex flex-col border border-gray-100/50 ${isFullScreen ? 'inset-4 rounded-[2.5rem]' : 'bottom-6 right-6 w-[380px] h-[580px] rounded-[2.5rem]'}`}>
+          <div className="p-6 border-b border-gray-50 flex justify-between items-center bg-white rounded-t-[2.5rem]">
+            <div className="flex items-center gap-3">
+              <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <div>
+                <h3 className="text-[13px] font-semibold text-gray-800 tracking-tight">Clinical Support</h3>
+                <p className="text-[10px] text-gray-400 font-medium uppercase tracking-[0.15em]">Cognify Framework</p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={() => setIsFullScreen(!isFullScreen)} className="text-gray-300 hover:text-gray-500">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15 3h6v6M9 21H3v-6" strokeWidth={1.5}/></svg>
+              </button>
+              <button onClick={() => setIsOpen(false)} className="text-gray-300 hover:text-gray-500 text-xl">&times;</button>
+            </div>
+          </div>
+
+          <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-6 scroll-smooth">
+            {history.length === 0 && (
+              <div className="text-center py-10 space-y-3">
+                <p className="text-[13px] text-gray-600 font-medium">Your Private Health Space</p>
+                <p className="text-[11px] text-gray-400 font-light px-6 leading-relaxed">I'm here to provide evidence-based insights into your cognitive progress. How can I support your wellbeing today?</p>
+              </div>
+            )}
+            
+            {history.map((m, i) => (
+              <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                <div className={`max-w-[85%] text-[12px] leading-relaxed px-4 py-3 shadow-sm ${m.role === 'user' ? 'bg-[#5F7A7B] text-white rounded-2xl rounded-tr-none' : 'bg-[#F8FAFA] text-gray-700 border border-gray-100 rounded-2xl rounded-tl-none font-light'}`}>
+                  {m.role === 'model' && <div className="text-[9px] font-bold text-[#5F7A7B] uppercase tracking-widest mb-1.5 opacity-80">Your Assistant</div>}
+                  
+                  {m.role === 'model' && i === history.length - 1 ? (
+                    <TypewriterMessage text={m.content} />
+                  ) : (
+                    <div className="whitespace-pre-wrap">{m.content}</div>
+                  )}
+                </div>
+              </div>
+            ))}
+
+            {loading && (
+              <div className="flex justify-start">
+                <div className="bg-[#F8FAFA] border border-gray-100 px-5 py-3 rounded-2xl rounded-tl-none flex items-center gap-1">
+                  <span className="dot"></span>
+                  <span className="dot"></span>
+                  <span className="dot"></span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="p-6 bg-white border-t border-gray-50 rounded-b-[2.5rem]">
+            <div className="flex items-center gap-3">
+              <input 
+                type="text" 
+                value={input} 
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
+                placeholder="Describe your symptoms..." 
+                className="flex-1 text-[13px] outline-none text-gray-800 font-light placeholder:text-gray-300" 
+              />
+              <button onClick={sendMessage} className="p-2 text-[#5F7A7B] hover:bg-[#F9F9F7] rounded-full transition-all">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
 function TaskWindow({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const tasks = [
     {
@@ -47,7 +191,7 @@ function TaskWindow({ isOpen, onClose }: { isOpen: boolean; onClose: () => void 
       title: "N-Back Memory Test",
       disorder: "Dementia / Cognitive Decline",
       description: "A continuous performance task used to measure working memory and memory capacity. Identify if the current stimulus matches the one from 'n' steps earlier.",
-      image: "https://images.unsplash.com/photo-1559757175-5700dde675bc?auto=format&fit=crop&q=80&w=800", // Representative brain/memory image
+      image: "https://images.unsplash.com/photo-1559757175-5700dde675bc?auto=format&fit=crop&q=80&w=800",
       time: "8 mins"
     },
     {
@@ -67,26 +211,23 @@ function TaskWindow({ isOpen, onClose }: { isOpen: boolean; onClose: () => void 
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.95 }}
-          className="fixed inset-4 z-[70] bg-[#F9F9F7] shadow-2xl rounded-[2rem] border border-gray-100 flex flex-col overflow-hidden"
+          className="fixed inset-4 z-[70] bg-gradient-to-br from-[#F9F9F7] via-[#FEFEFE] to-[#F5F5F3] shadow-2xl rounded-[2rem] border border-gray-100 flex flex-col overflow-hidden"
         >
-          {/* Header */}
           <div className="p-8 bg-white border-b border-gray-50 flex justify-between items-center">
             <div>
-              <h2 className="text-3xl font-light text-gray-800 tracking-tight">Clinical Assessments</h2>
-              <p className="text-sm text-gray-400 mt-1">Select a task to begin your cognitive profiling.</p>
+              <h2 className="text-3xl font-light text-gray-900 tracking-tight">Clinical Assessments</h2>
+              <p className="text-sm text-gray-500 mt-1">Select a task to begin your cognitive profiling.</p>
             </div>
             <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-3xl text-gray-400">&times;</button>
           </div>
 
-          {/* Task List (Horizontal Cards) */}
           <div className="flex-1 overflow-y-auto p-8 space-y-6 max-w-5xl mx-auto w-full">
             {tasks.map((task) => (
               <motion.div 
                 key={task.id}
                 whileHover={{ y: -5 }}
-                className="bg-white rounded-[2rem] border border-gray-100 shadow-sm overflow-hidden flex flex-col md:flex-row h-auto md:h-64 group cursor-pointer"
+                className="bg-white rounded-[2rem] border border-gray-100 shadow-sm hover:shadow-md overflow-hidden flex flex-col md:flex-row h-auto md:h-64 group cursor-pointer transition-all"
               >
-                {/* Reference Image */}
                 <div className="w-full md:w-1/3 h-48 md:h-full relative overflow-hidden">
                   <img 
                     src={task.image} 
@@ -96,21 +237,20 @@ function TaskWindow({ isOpen, onClose }: { isOpen: boolean; onClose: () => void 
                   <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors" />
                 </div>
 
-                {/* Content */}
                 <div className="flex-1 p-8 flex flex-col justify-between">
                   <div>
                     <div className="flex justify-between items-start mb-2">
                       <span className="text-[10px] font-bold text-[#5F7A7B] uppercase tracking-[0.2em]">{task.disorder}</span>
                       <span className="text-[10px] text-gray-400">{task.time}</span>
                     </div>
-                    <h3 className="text-2xl font-medium text-gray-800 mb-3">{task.title}</h3>
-                    <p className="text-gray-500 text-sm font-light leading-relaxed line-clamp-3">
+                    <h3 className="text-2xl font-medium text-gray-900 mb-3">{task.title}</h3>
+                    <p className="text-gray-600 text-sm font-light leading-relaxed line-clamp-3">
                       {task.description}
                     </p>
                   </div>
                   
                   <div className="flex justify-end mt-4">
-                    <button className="px-6 py-2 bg-[#5F7A7B] text-white rounded-full text-xs font-medium hover:bg-[#4A6364] transition-all">
+                    <button className="px-6 py-2 bg-gradient-to-r from-[#5F7A7B] to-[#4D6364] text-white rounded-full text-xs font-medium hover:shadow-lg transition-all">
                       Begin Assessment
                     </button>
                   </div>
@@ -124,183 +264,6 @@ function TaskWindow({ isOpen, onClose }: { isOpen: boolean; onClose: () => void 
   );
 }
 
-// --- CHAT ASSISTANT COMPONENT ---
-function ChatAssistant() {
-  const [isOpen, setIsOpen] = useState(false);
-  const [isFullScreen, setIsFullScreen] = useState(false);
-  // Chat state
-  const [history, setHistory] = useState<ChatMessage[]>([]);
-  const [input, setInput] = useState('');
-  const [loading, setLoading] = useState(false);
-  const scrollRef = useRef<HTMLDivElement | null>(null);
-
-  const apiBase = 'http://10.10.254.183:8000';
-
-  const sendMessage = async () => {
-    const text = input.trim();
-    if (!text || loading) return;
-
-    setLoading(true);
-    setInput('');
-
-    try {
-      const res = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, history }),
-      });
-
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        console.error('Chat API error:', json?.detail || json);
-        setHistory((h) => [...h, { role: 'user', content: text }]);
-        return;
-      }
-
-      if (Array.isArray(json?.history)) {
-        setHistory(json.history.map(normalizeMessage));
-      } else {
-        const assistantText = toText(json?.response ?? json);
-        setHistory((h) => [
-          ...h,
-          { role: 'user', content: text },
-          { role: 'model', content: assistantText },
-        ]);
-      }
-    } catch (e) {
-      console.error('Chat request failed:', e);
-      setHistory((h) => [...h, { role: 'user', content: text }]);
-    } finally {
-      setLoading(false);
-      requestAnimationFrame(() => {
-        if (scrollRef.current) {
-          scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-        }
-      });
-    }
-  };
-
-  const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      sendMessage();
-    }
-  };
-
-  const toggleChat = () => setIsOpen(!isOpen);
-  const toggleFullScreen = () => setIsFullScreen(!isFullScreen);
-
-  return (
-    <>
-      {/* FLOATING ICON */}
-      {!isOpen && (
-        <button
-          onClick={toggleChat}
-          className="fixed bottom-6 right-6 p-4 bg-[#5F7A7B] text-white rounded-full shadow-2xl hover:scale-110 transition-all z-[60] group"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H12m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 0 1-2.555-.337A5.972 5.972 0 0 1 5.41 20.97a5.969 5.969 0 0 1-.474-.065 4.48 4.48 0 0 0 .978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25Z" />
-          </svg>
-        </button>
-      )}
-
-      {/* CHAT WINDOW */}
-      {isOpen && (
-        <div 
-          className={`fixed transition-all duration-500 ease-in-out z-[60] bg-white shadow-2xl flex flex-col border border-gray-100
-            ${isFullScreen 
-              ? 'inset-4 rounded-[2rem]' 
-              : 'bottom-6 right-6 w-[350px] h-[500px] rounded-[2rem]'
-            }`}
-        >
-          {/* Header */}
-          <div className="p-5 border-b border-gray-50 flex justify-between items-center bg-[#F9F9F7] rounded-t-[2rem]">
-            <div>
-              <h3 className="text-sm font-medium text-gray-800">Cognify AI</h3>
-              <p className="text-[10px] text-[#5F7A7B] uppercase tracking-widest">Assistant</p>
-            </div>
-            <div className="flex gap-2">
-              <button onClick={toggleFullScreen} className="p-1.5 hover:bg-gray-200 rounded-md transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4 text-gray-400">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" />
-                </svg>
-              </button>
-              <button onClick={toggleChat} className="p-1.5 hover:bg-gray-200 rounded-md transition-colors text-gray-400">&times;</button>
-            </div>
-          </div>
-
-        {/* Messages Area (design preserved) */}
-          <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-4">
-            {history.length === 0 && !loading && (
-              <div className="bg-[#F9F9F7] p-3 rounded-2xl rounded-tl-none max-w-[85%] text-xs text-gray-600 leading-relaxed">
-                Hello! How can I assist with your cognitive tasks or journal analysis today?
-              </div>
-            )}
-
-            {history.length > 0 && (
-              <div className="space-y-3">
-                {history.map((m, idx) => (
-                  <div key={idx} className={m.role === 'user' ? 'flex justify-end' : 'flex justify-start'}>
-                    <div
-                      className={
-                        'max-w-[85%] text-xs leading-relaxed rounded-2xl ' +
-                        (m.role === 'user'
-                          ? 'bg-[#5F7A7B] text-white p-3 rounded-tr-none'
-                          : 'bg-[#F9F9F7] text-gray-600 p-3 rounded-tl-none')
-                      }
-                    >
-                      <div className="uppercase text-[10px] tracking-widest opacity-60 mb-1">
-                        {m.role === 'user' ? 'You' : 'Assistant'}
-                      </div>
-                      <div className="whitespace-pre-wrap">{m.content}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {loading && <div className="text-xs text-gray-400 italic">Assistant is typing…</div>}
-          </div>
-          
-{/* Input Area (design preserved) */}
-          <div className="p-4 border-t border-gray-50">
-            <div className="flex items-center gap-2 bg-[#F9F9F7] px-4 py-2 rounded-2xl">
-              <label className="cursor-pointer p-1 text-gray-400 hover:text-[#5F7A7B]">
-                <input type="file" className="hidden" />
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="m18.375 12.739-7.693 7.693a4.5 4.5 0 0 1-6.364-6.364l10.94-10.94A3 3 0 1 1 19.5 7.372L8.552 18.32a1.5 1.5 0 0 1-2.121-2.121l10.517-10.517" />
-                </svg>
-              </label>
-
-              <input
-                type="text"
-                placeholder="Ask me anything..."
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={onKeyDown}
-                disabled={loading}
-                className="flex-1 bg-transparent border-none text-xs outline-none text-gray-700"
-              />
-
-              <button
-                onClick={sendMessage}
-                className="text-[#5F7A7B] disabled:opacity-30"
-                disabled={!input.trim() || loading}
-                aria-label="Send message"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" />
-                </svg>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </>
-  );
-}
-
-// --- JOURNAL COMPONENT --- (Unchanged)
 function JournalWindow({ isOpen, onClose, userId }: { isOpen: boolean; onClose: () => void; userId: string | undefined }) {
   const [journalText, setJournalText] = useState("");
   const [history, setHistory] = useState<any[]>([]);
@@ -321,51 +284,51 @@ function JournalWindow({ isOpen, onClose, userId }: { isOpen: boolean; onClose: 
       ...history.map((h) => String(h.content || '')).filter(Boolean),
     ].filter(Boolean).slice(0, 10);
 
-    const textPayload = entries.join('\n\n');
+      const textPayload = entries.join('\n\n');
 
-    const res = await fetch('/api/journal', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: textPayload }),
-    });
+      const res = await fetch('/api/journal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: textPayload }),
+      });
 
-    const raw = await res.text();
-    let data: any;
-    try { data = JSON.parse(raw); } catch { data = raw; }
+      const raw = await res.text();
+      let data: any;
+      try { data = JSON.parse(raw); } catch { data = raw; }
 
-    if (!res.ok) {
-      const detail = (data && (data.detail ?? data)) ?? 'Analysis failed';
-      const normalizeDetail = (d: any): string => {
-        if (typeof d === 'string') return d;
-        if (Array.isArray(d)) {
-          return d.map((e: any) => {
-            const loc = Array.isArray(e?.loc) ? e.loc.join('.') : e?.loc;
-            return [e?.msg, loc ? `@ ${loc}` : '', e?.type ? `(${e.type})` : '']
-              .filter(Boolean)
-              .join(' ');
-          }).join('\n');
-        }
-        if (typeof d === 'object') {
-          if (typeof d.msg === 'string') {
-            const loc = Array.isArray(d?.loc) ? d.loc.join('.') : d?.loc;
-            return [d.msg, loc ? `@ ${loc}` : '', d?.type ? `(${d.type})` : '']
-              .filter(Boolean)
-              .join(' ');
+      if (!res.ok) {
+        const detail = (data && (data.detail ?? data)) ?? 'Analysis failed';
+        const normalizeDetail = (d: any): string => {
+          if (typeof d === 'string') return d;
+          if (Array.isArray(d)) {
+            return d.map((e: any) => {
+              const loc = Array.isArray(e?.loc) ? e.loc.join('.') : e?.loc;
+              return [e?.msg, loc ? `@ ${loc}` : '', e?.type ? `(${e.type})` : '']
+                .filter(Boolean)
+                .join(' ');
+            }).join('\n');
           }
-          return JSON.stringify(d);
-        }
-        return String(d);
-      };
-      setAnalysisError(normalizeDetail(detail));
-      return;
+          if (typeof d === 'object') {
+            if (typeof d.msg === 'string') {
+              const loc = Array.isArray(d?.loc) ? d.loc.join('.') : d?.loc;
+              return [d.msg, loc ? `@ ${loc}` : '', d?.type ? `(${d.type})` : '']
+                .filter(Boolean)
+                .join(' ');
+            }
+            return JSON.stringify(d);
+          }
+          return String(d);
+        };
+        setAnalysisError(normalizeDetail(detail));
+        return;
+      }
+      setAnalysis(data);
+    } catch (e: any) {
+      setAnalysisError(String(e?.message ?? e));
+    } finally {
+      setAnalyzing(false);
     }
-    setAnalysis(data);
-  } catch (e: any) {
-    setAnalysisError(String(e?.message ?? e));
-  } finally {
-    setAnalyzing(false);
-  }
-};
+  };
 
   useEffect(() => { if (isOpen && userId) fetchHistory(); }, [isOpen, userId]);
 
@@ -425,27 +388,55 @@ function JournalWindow({ isOpen, onClose, userId }: { isOpen: boolean; onClose: 
   return (
     <AnimatePresence>
       {isOpen && (
-        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="fixed inset-4 z-[70] bg-white shadow-2xl rounded-[2rem] border border-gray-100 flex overflow-hidden">
-          <div className="w-72 bg-[#F9F9F7] border-r border-gray-100 flex flex-col p-6">
-            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-6">History</h3>
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.95 }} 
+          animate={{ opacity: 1, scale: 1 }} 
+          exit={{ opacity: 0, scale: 0.95 }} 
+          className="fixed inset-4 z-[70] bg-white shadow-2xl rounded-[2rem] border border-gray-100 flex overflow-hidden"
+        >
+          <div className="w-72 bg-gradient-to-b from-[#F9F9F7] to-[#F5F5F3] border-r border-gray-100 flex flex-col p-6">
+            <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-6">History</h3>
             <div className="flex-1 overflow-y-auto space-y-3">
               {history.map((entry) => (
-                <button key={entry.id} onClick={() => setJournalText(entry.content)} className="w-full text-left p-4 rounded-2xl bg-white border border-gray-50 hover:border-[#5F7A7B] transition-all">
+                <button 
+                  key={entry.id} 
+                  onClick={() => setJournalText(entry.content)} 
+                  className="w-full text-left p-4 rounded-2xl bg-white border border-gray-50 hover:border-[#5F7A7B] transition-all"
+                >
                   <p className="text-[10px] text-[#5F7A7B] font-bold mb-1">{new Date(entry.created_at).toLocaleDateString()}</p>
-                  <p className="text-xs text-gray-500 line-clamp-2">{entry.content}</p>
+                  <p className="text-xs text-gray-600 line-clamp-2">{entry.content}</p>
                 </button>
               ))}
             </div>
           </div>
+          
           <div className="flex-1 flex flex-col">
-            <div className="p-8 flex justify-between items-center">
-              <h2 className="text-2xl font-light text-gray-800 tracking-tight">Daily Reflection</h2>
+            <div className="p-8 flex justify-between items-center border-b border-gray-50">
+              <h2 className="text-2xl font-light text-gray-900 tracking-tight">Daily Reflection</h2>
               <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full text-2xl text-gray-400">&times;</button>
             </div>
-            <textarea value={journalText} onChange={(e) => setJournalText(e.target.value)} placeholder="What's on your mind?" className="flex-1 px-10 py-4 text-gray-700 outline-none resize-none bg-transparent font-light text-xl leading-relaxed" />
-            <div className="p-8 border-t border-gray-50 flex justify-end">
-              <button onClick={saveJournal} disabled={isLoading || !journalText.trim()} className="px-10 py-3 bg-[#5F7A7B] text-white rounded-full text-sm font-medium">
-                {isLoading ? "Holding this for you..." : "Secure Reflection"}
+            
+            <textarea 
+              value={journalText} 
+              onChange={(e) => setJournalText(e.target.value)} 
+              placeholder="What's on your mind?" 
+              className="flex-1 px-10 py-4 text-gray-800 outline-none resize-none bg-transparent font-light text-xl leading-relaxed" 
+            />
+            
+            <div className="p-8 border-t border-gray-50 flex justify-end gap-3">
+              <button
+                onClick={() => analyzeJournals()}
+                disabled={analyzing || (!journalText.trim() && history.length === 0)}
+                className="px-10 py-3 bg-white border border-gray-200 text-gray-700 rounded-full text-sm font-medium hover:bg-[#F9F9F7] disabled:opacity-50 transition-all"
+              >
+                {analyzing ? 'Analyzing…' : 'Analyze'}
+              </button>
+              <button
+                onClick={saveJournal}
+                disabled={isLoading || !journalText.trim()}
+                className="px-10 py-3 bg-gradient-to-r from-[#5F7A7B] to-[#4D6364] text-white rounded-full text-sm font-medium hover:shadow-lg disabled:opacity-50 transition-all"
+              >
+                {isLoading ? 'Holding this for you...' : 'Secure Reflection'}
               </button>
             </div>
           </div>
@@ -453,7 +444,6 @@ function JournalWindow({ isOpen, onClose, userId }: { isOpen: boolean; onClose: 
         </motion.div>
       )}
     </AnimatePresence>
-    
   );
 }
 
@@ -516,7 +506,10 @@ export default function Dashboard() {
   setStreak(count);
 };
 
-useEffect(() => {
+  const [isMindfulnessOpen, setIsMindfulnessOpen] = useState(false);
+
+
+  useEffect(() => {
     const getData = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
@@ -525,7 +518,6 @@ useEffect(() => {
       }
       setUser(user);
 
-      // Fetch the screening results
       const { data } = await supabase
         .from('result_q')
         .select('*')
@@ -539,37 +531,53 @@ useEffect(() => {
     getData();
   }, [router, supabase]);
 
-  // Helper to get primary status string
   const getStatus = () => {
-    if (!results) return "Profiling in progress";
+    if (!results) return "Analyzing profile...";
     const scores = [
-      { label: "Depression Risk", val: results.phq9_score },
-      { label: "Neurodivergence", val: results.srs_score },
-      { label: "Cognitive Risk", val: results.moca_score }
+      { l: "Depression Risk", v: results.phq9_score },
+      { l: "Anxiety Risk", v: results.gad7_score },
+      { l: "Executive Function", v: results.asrs_score }
     ];
-    const top = scores.sort((a, b) => b.val - a.val)[0];
-    return top.val > 15 ? top.label : "Baseline Stable";
+    const top = scores.sort((a, b) => b.v - a.v)[0];
+    return top.v > 50 ? top.l : "Baseline Stable";
   };
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    router.push('/');
+  };
+
   return (
-    <div className="min-h-screen bg-[#F9F9F7] flex flex-col relative">
+    <div className="min-h-screen bg-gradient-to-br from-[#F9F9F7] via-[#FEFEFE] to-[#F5F5F3] flex flex-col relative overflow-hidden">
+      {/* Animated Background Elements */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-1/4 left-0 w-full h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent animate-pulse"></div>
+        <div className="absolute top-3/4 left-0 w-full h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent animate-pulse" style={{ animationDelay: '1s' }}></div>
+        <div className="absolute top-0 left-1/4 w-px h-full bg-gradient-to-b from-transparent via-gray-300 to-transparent animate-pulse" style={{ animationDelay: '0.5s' }}></div>
+        <div className="absolute top-0 right-1/4 w-px h-full bg-gradient-to-b from-transparent via-gray-300 to-transparent animate-pulse" style={{ animationDelay: '1.5s' }}></div>
+        <div className="absolute top-20 left-10 w-32 h-16 border-2 border-gray-300 rounded-t-full animate-float opacity-20"></div>
+        <div className="absolute top-1/3 right-16 w-40 h-20 border-2 border-[#5F7A7B] opacity-10 rounded-b-full animate-float-delayed"></div>
+        <div className="absolute bottom-1/4 left-1/3 w-24 h-12 border-2 border-gray-300 rounded-t-full animate-float opacity-20" style={{ animationDelay: '2s' }}></div>
+        <div className="absolute top-32 right-32 w-20 h-20 border border-dashed border-gray-300 rounded-full animate-spin-slow opacity-15"></div>
+      </div>
+
       <nav className="fixed left-0 right-0 z-50 flex justify-center px-6 bottom-5 md:bottom-auto md:top-6">
-        <div className="bg-white/70 backdrop-blur-xl border border-white/40 shadow-lg rounded-full px-6 py-2 flex items-center justify-between w-full max-w-2xl gap-3">
+        <div className="bg-white/80 backdrop-blur-xl border border-white/60 shadow-lg rounded-full px-6 py-2 flex items-center justify-between w-full max-w-2xl gap-3">
           <div className="hidden sm:block">
             <Image src={congnifyLogo} alt="Logo" width={55} height={55} className="opacity-80" />
           </div>
           <div className="flex flex-1 justify-around md:justify-center items-center gap-1 md:gap-8">
             <NavItem label="Overview" active icon={<path d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18v-2.25Z" />} />
             
-            {/* Task Link */}
-            <button onClick={() => setIsTaskOpen(true)}>
+            <button onClick={() => setIsTaskOpen(true)} className="hover:opacity-80 transition-opacity">
               <NavItem label="Tasks" icon={<path d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />} />
             </button>
 
-            <button onClick={() => setIsJournalOpen(true)}>
+            <button onClick={() => setIsJournalOpen(true)} className="hover:opacity-80 transition-opacity">
               <NavItem label="Journal" icon={<path d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />} />
             </button>
           </div>
-          <button onClick={() => supabase.auth.signOut().then(() => router.push('/'))} className="p-1.5 text-gray-400 hover:text-red-400">
+          <button onClick={handleSignOut} className="p-1.5 text-gray-400 hover:text-red-400 transition-colors">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9" />
             </svg>
@@ -577,33 +585,41 @@ useEffect(() => {
         </div>
       </nav>
 
-      <main className="flex-1 p-6 md:p-12 mt-8 md:mt-20 max-w-7xl mx-auto w-full overflow-y-auto pb-32">
-        <header className="flex flex-col md:flex-row justify-between items-start md:items-end mb-12 gap-4">
+      <main className="flex-1 p-6 md:p-12 mt-12 md:mt-24 max-w-7xl mx-auto w-full pb-32 relative z-10">
+        <header className="mb-12 flex justify-between items-end">
           <div>
-            <h1 className="text-4xl font-light text-gray-800 tracking-tight">Welcome, {user?.email?.split('@')[0]}</h1>
-            <p className="text-gray-400 font-light mt-1 text-sm italic">"Focus is the anchor of clarity."</p>
+            <h1 className="text-4xl font-light text-gray-900 tracking-tight">Welcome, {user?.email?.split('@')[0]}</h1>
+            <p className="text-gray-500 font-light mt-1 text-sm italic">"Focus is the anchor of clarity."</p>
           </div>
-          <div className="bg-white/60 px-6 py-2 rounded-full border border-gray-100">
-            <p className="text-[10px] text-gray-400 uppercase tracking-widest leading-none mb-1">Current Status</p>
+          <div className="bg-white px-6 py-2 rounded-full border border-gray-100 shadow-sm">
+            <p className="text-[10px] text-gray-400 uppercase tracking-widest mb-1">Status</p>
             <p className="text-[#5F7A7B] font-medium text-sm">{getStatus()}</p>
           </div>
         </header>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          <div className="md:col-span-2 bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm h-72 flex flex-col justify-between">
-            <h3 className="text-sm font-medium text-gray-600">Cognitive Trends</h3>
-            <div className="flex items-end justify-between h-32 px-4 gap-2">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="md:col-span-2 bg-white p-10 rounded-[2.5rem] border border-gray-50 shadow-sm hover:shadow-md transition-shadow h-72">
+            <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-[0.2em] mb-8">Cognitive Index</h3>
+            <div className="flex items-end justify-between h-32 gap-3 px-4">
               {[40, 70, 45, 90, 65, 80, 50, 60, 85].map((h, i) => (
-                <div key={i} className="flex-1 bg-[#F0F4F4] rounded-full transition-all hover:bg-[#5F7A7B]" style={{ height: `${h}%` }}></div>
+                <div 
+                  key={i} 
+                  className="flex-1 bg-gradient-to-t from-[#5F7A7B] to-[#7A9A9B] rounded-full transition-all hover:opacity-80 cursor-pointer" 
+                  style={{ height: `${h}%` }}
+                ></div>
               ))}
             </div>
-            <p className="text-[10px] text-gray-400 uppercase tracking-tighter text-center">Weekly Index</p>
           </div>
 
-          <div className="bg-[#5F7A7B] p-8 rounded-[2.5rem] shadow-sm text-white flex flex-col justify-between">
-            <h3 className="text-sm opacity-80 uppercase tracking-widest">Next Step</h3>
+          <div className="bg-gradient-to-br from-[#5F7A7B] to-[#4D6364] p-10 rounded-[2.5rem] text-white flex flex-col justify-between shadow-lg hover:shadow-xl transition-shadow">
+            <p className="text-[10px] opacity-60 uppercase tracking-widest">Priority Task</p>
             <p className="text-xl font-light leading-snug">Complete your first Stroop assessment to baseline attention.</p>
-            <button onClick={() => setIsTaskOpen(true)} className="mt-6 px-6 py-2 bg-white text-[#5F7A7B] rounded-full text-xs font-medium hover:shadow-lg transition-all active:scale-95">Start Now</button>
+            <button 
+              onClick={() => setIsTaskOpen(true)} 
+              className="mt-6 w-fit px-8 py-2.5 bg-white text-[#5F7A7B] rounded-full text-xs font-bold transition-all hover:shadow-xl active:scale-95"
+            >
+              Start Now
+            </button>
           </div>
 
           {/* <MetricCard title="Daily Streak" value="1" sub="Day Started" /> */}
@@ -614,26 +630,54 @@ useEffect(() => {
           <MetricCard 
             title="Severity" 
             value={results ? results.phq9_severity.charAt(0).toUpperCase() : "P"} 
-            sub={results ? `${results.phq9_severity} Risk Detected` : "Pending Review"} 
+            sub={results ? `${results.phq9_severity} risk` : "Awaiting Data"} 
           />
-
         </div>
-          <section className="mt-5 bg-white p-10 rounded-[2.5rem] border border-gray-100 shadow-sm flex flex-col sm:flex-row justify-between items-center gap-6">
+
+        <section 
+          onClick={() => setIsMindfulnessOpen(true)}
+          className="mt-8 bg-white p-10 rounded-[2.5rem] border border-gray-100 shadow-sm hover:shadow-md flex flex-col sm:flex-row justify-between items-center gap-6 cursor-pointer transition-all group"
+        >
           <div className="text-center sm:text-left">
-            <h4 className="text-2xl font-light text-gray-800">Mindfulness & Tools</h4>
-            <p className="text-sm text-gray-400 font-light mt-1">Access clinical audio guides and focus enhancers.</p>
+            <h4 className="text-2xl font-light text-gray-900">Mindfulness & Tools</h4>
+            <p className="text-sm text-gray-500 font-light mt-1">Access clinical audio guides and focus enhancers.</p>
           </div>
-          <button className="p-5 bg-[#F9F9F7] rounded-full hover:bg-[#5F7A7B] group transition-all">
+          <button className="p-5 bg-[#F9F9F7] rounded-full group-hover:bg-[#5F7A7B] transition-all">
              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="text-[#5F7A7B] group-hover:text-white transition-colors" strokeWidth="1.5">
                <path d="M9 18l6-6-6-6"/>
              </svg>
           </button>
-        </section>
+        </section>  
       </main>
 
       <ChatAssistant />
       <TaskWindow isOpen={isTaskOpen} onClose={() => setIsTaskOpen(false)} />
       <JournalWindow isOpen={isJournalOpen} onClose={() => setIsJournalOpen(false)} userId={user?.id} />
+      <MindfulnessWindow isOpen={isMindfulnessOpen} onClose={() => setIsMindfulnessOpen(false)} />
+
+      <style jsx>{`
+        @keyframes float {
+          0%, 100% { transform: translateY(0px); }
+          50% { transform: translateY(-20px); }
+        }
+        @keyframes float-delayed {
+          0%, 100% { transform: translateY(0px); }
+          50% { transform: translateY(-15px); }
+        }
+        .animate-float {
+          animation: float 6s ease-in-out infinite;
+        }
+        .animate-float-delayed {
+          animation: float-delayed 8s ease-in-out infinite;
+        }
+        .animate-spin-slow {
+          animation: spin 20s linear infinite;
+        }
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 }
@@ -647,12 +691,15 @@ function NavItem({ label, icon, active = false }: { label: string, icon: React.R
   );
 }
 
-function MetricCard({ title, value, sub }: { title: string, value: string, sub: string }) {
+function MetricCard({ title, value, sub, onClick }: { title: string, value: string, sub: string, onClick?: () => void }) {
   return (
-    <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm flex flex-col items-center justify-center space-y-2 hover:bg-[#F9F9F7] transition-colors group">
-      <p className="text-xs text-gray-400 uppercase tracking-widest">{title}</p>
-      <p className="text-5xl font-light text-gray-800 group-hover:text-[#5F7A7B] transition-colors">{value}</p>
-      <p className="text-[10px] text-[#5F7A7B] uppercase tracking-tighter">{sub}</p>
+    <div 
+      onClick={onClick} 
+      className={`bg-white p-10 rounded-[2.5rem] border border-gray-50 shadow-sm hover:shadow-md flex flex-col items-center justify-center space-y-2 transition-all group ${onClick ? 'cursor-pointer' : ''}`}
+    >
+      <p className="text-[10px] text-gray-400 uppercase tracking-widest">{title}</p>
+      <p className="text-5xl font-light text-gray-900 group-hover:text-[#5F7A7B] transition-colors">{value}</p>
+      <p className="text-[10px] text-[#5F7A7B] font-bold uppercase tracking-widest">{sub}</p>
     </div>
   );
 }
