@@ -288,7 +288,7 @@ function TaskWindow({ isOpen, onClose }: { isOpen: boolean; onClose: () => void 
       title:"Flanker",
       disorder: "Attention Deficit / Executive Function",
       description: "Assess your ability to inhibit cognitive interference. Name the color of the word rather than reading the word itself.",
-      image: "https://images.unsplash.com/photo-1509228468518-180dd4864904?auto=format&fit=crop&q=80&w=800",
+      image: "https://images.unsplash.com/photo-1550684848-fac1c5b4e853?q=80&w=2070&auto=format&fit=crop",
       time: "5 mins",
       link: "/onboarding/dashboard/flanker"
     }
