@@ -55,11 +55,84 @@ function ChatAssistant() {
   const [loading, setLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
+    // NEW: supabase + initial-start flag
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+    const [started, setStarted] = useState(false);
+
+
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [history, loading]);
+
+  // NEW: initialize chat when the widget opens
+  useEffect(() => {
+    if (!isOpen || started) return;
+
+    (async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const access_token = session?.access_token;
+        const user_id = session?.user?.id;
+
+        if (!user_id || !access_token) {
+          setHistory([
+            { role: 'model', content: 'Please sign in to start your assistant.' }
+          ]);
+          setStarted(true);
+          return;
+        }
+
+        // Call the journaling summarizer; it will build the JSON payload you wanted
+        const res = await fetch('/api/journal-summarizer', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user_id, access_token, limit: 10 })
+        });
+
+        const raw = await res.text();
+
+        // Fallback: no journals → start normal chat
+      if (res.status === 404) {
+        setHistory([
+          { role: 'model', content: 'Welcome — starting general assistant. No journals found yet; you can write one or just chat.' }
+        ]);
+        return;
+      }
+
+      // Other errors: also fallback to normal chat
+      if (!res.ok) {
+        setHistory([
+          { role: 'model', content: `Starting general assistant. Summarizer unavailable (${res.status}).` }
+        ]);
+        return;
+      }
+
+        let initial: string;
+        try {
+          const json = JSON.parse(raw);
+          // Use the same normalization as the chat endpoint
+          initial = toText(json?.response ?? json);
+        } catch {
+          initial = toText(raw);
+        }
+
+        setHistory([
+          { role: 'model', content: initial || 'Hello — ready to support you today.' }
+        ]);
+      } catch (e: any) {
+        setHistory([
+          { role: 'model', content: `Setup failed: ${String(e?.message ?? e)}` }
+        ]);
+      } finally {
+        setStarted(true);
+      }
+    })();
+  }, [isOpen, started, supabase]);
 
   const sendMessage = async () => {
     const text = input.trim();
