@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import congnifyLogo from '../../../public/cognify_logo.png';
 import { MindfulnessWindow } from '@/app/components/Mindfulness';
 import { FloatingPlayer } from '@/app/components/FloatingPlayer'; // Check your folder path
+import { Brain, BrainCircuitIcon } from "lucide-react";
 
 type ChatMessage = { role: 'user' | 'model'; content: string };
 
@@ -602,7 +603,7 @@ export default function Dashboard() {
       <nav className="fixed left-0 right-0 z-50 flex justify-center px-6 bottom-5 md:bottom-auto md:top-6">
         <div className="bg-white/80 backdrop-blur-xl border border-white/60 shadow-lg rounded-full px-6 py-2 flex items-center justify-between w-full max-w-2xl gap-3">
           <div className="hidden sm:block">
-            <Image src={congnifyLogo} alt="Logo" width={55} height={55} className="opacity-80" />
+            <div className="text-xl flex flex-row gap-1 text-[#5F7A7B] font-bold"><BrainCircuitIcon /> Cognify</div>
           </div>
           <div className="flex flex-1 justify-around md:justify-center items-center gap-1 md:gap-8">
             <NavItem label="Overview" active icon={<path d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18v-2.25Z" />} />
