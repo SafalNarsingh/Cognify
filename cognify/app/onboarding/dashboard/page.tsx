@@ -20,15 +20,6 @@ const toText = (c: any): string => {
   return c.text || c.message || JSON.stringify(c);
 };
 
-const normalizeMessage = (msg: any): ChatMessage => {
-  const roleKey = String(msg.role ?? msg.type ?? '').toLowerCase();
-  const role: 'user' | 'model' =
-    roleKey === 'ai' || roleKey === 'assistant' || roleKey === 'model'
-      ? 'model'
-      : 'user';
-  return { role, content: toText(msg.content) };
-};
-
 // --- TYPEWRITER COMPONENT ---
 function TypewriterMessage({ text }: { text: string }) {
   const [displayedText, setDisplayedText] = useState("");
@@ -118,30 +109,30 @@ function ChatAssistant() {
             <div className="flex items-center gap-3">
               <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
               <div>
-                <h3 className="text-[13px] font-semibold text-gray-800 tracking-tight">Clinical Support</h3>
-                <p className="text-[10px] text-gray-400 font-medium uppercase tracking-[0.15em]">Cognify Framework</p>
+                <h3 className="text-sm font-semibold text-black tracking-tight">Clinical Support</h3>
+                <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-[0.15em]">Cognify Framework</p>
               </div>
             </div>
             <div className="flex gap-2">
-              <button onClick={() => setIsFullScreen(!isFullScreen)} className="text-gray-300 hover:text-gray-500">
+              <button onClick={() => setIsFullScreen(!isFullScreen)} className="text-gray-400 hover:text-gray-700">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15 3h6v6M9 21H3v-6" strokeWidth={1.5}/></svg>
               </button>
-              <button onClick={() => setIsOpen(false)} className="text-gray-300 hover:text-gray-500 text-xl">&times;</button>
+              <button onClick={() => setIsOpen(false)} className="text-gray-400 hover:text-gray-700 text-xl font-normal">&times;</button>
             </div>
           </div>
 
           <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-6 scroll-smooth">
             {history.length === 0 && (
               <div className="text-center py-10 space-y-3">
-                <p className="text-[13px] text-gray-600 font-medium">Your Private Health Space</p>
-                <p className="text-[11px] text-gray-400 font-light px-6 leading-relaxed">I'm here to provide evidence-based insights into your cognitive progress. How can I support your wellbeing today?</p>
+                <p className="text-sm font-medium text-black">Your Private Health Space</p>
+                <p className="text-xs font-normal text-gray-600 px-6 leading-relaxed">I'm here to provide evidence-based insights into your cognitive progress. How can I support your wellbeing today?</p>
               </div>
             )}
             
             {history.map((m, i) => (
               <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[85%] text-[12px] leading-relaxed px-4 py-3 shadow-sm ${m.role === 'user' ? 'bg-[#5F7A7B] text-white rounded-2xl rounded-tr-none' : 'bg-[#F8FAFA] text-gray-700 border border-gray-100 rounded-2xl rounded-tl-none font-light'}`}>
-                  {m.role === 'model' && <div className="text-[9px] font-bold text-[#5F7A7B] uppercase tracking-widest mb-1.5 opacity-80">Your Assistant</div>}
+                <div className={`max-w-[85%] text-sm leading-relaxed px-4 py-3 shadow-sm ${m.role === 'user' ? 'bg-[#5F7A7B] text-white font-normal rounded-2xl rounded-tr-none' : 'bg-[#F8FAFA] text-gray-900 border border-gray-100 rounded-2xl rounded-tl-none font-normal'}`}>
+                  {m.role === 'model' && <div className="text-[9px] font-bold text-[#5F7A7B] uppercase tracking-[0.15em] mb-1.5 opacity-80">Your Assistant</div>}
                   
                   {m.role === 'model' && i === history.length - 1 ? (
                     <TypewriterMessage text={m.content} />
@@ -171,7 +162,7 @@ function ChatAssistant() {
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
                 placeholder="Describe your symptoms..." 
-                className="flex-1 text-[13px] outline-none text-gray-800 font-light placeholder:text-gray-300" 
+                className="flex-1 text-sm font-normal outline-none text-black placeholder:text-gray-400 placeholder:font-normal" 
               />
               <button onClick={sendMessage} className="p-2 text-[#5F7A7B] hover:bg-[#F9F9F7] rounded-full transition-all">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
@@ -215,10 +206,10 @@ function TaskWindow({ isOpen, onClose }: { isOpen: boolean; onClose: () => void 
         >
           <div className="p-8 bg-white border-b border-gray-50 flex justify-between items-center">
             <div>
-              <h2 className="text-3xl font-light text-gray-900 tracking-tight">Clinical Assessments</h2>
-              <p className="text-sm text-gray-500 mt-1">Select a task to begin your cognitive profiling.</p>
+              <h2 className="text-3xl font-normal text-black tracking-tight">Clinical Assessments</h2>
+              <p className="text-sm font-normal text-gray-700 mt-1">Select a task to begin your cognitive profiling.</p>
             </div>
-            <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-3xl text-gray-400">&times;</button>
+            <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-3xl font-normal text-gray-600">&times;</button>
           </div>
 
           <div className="flex-1 overflow-y-auto p-8 space-y-6 max-w-5xl mx-auto w-full">
@@ -240,17 +231,17 @@ function TaskWindow({ isOpen, onClose }: { isOpen: boolean; onClose: () => void 
                 <div className="flex-1 p-8 flex flex-col justify-between">
                   <div>
                     <div className="flex justify-between items-start mb-2">
-                      <span className="text-[10px] font-bold text-[#5F7A7B] uppercase tracking-[0.2em]">{task.disorder}</span>
-                      <span className="text-[10px] text-gray-400">{task.time}</span>
+                      <span className="text-[10px] font-bold text-[#5F7A7B] uppercase tracking-[0.15em]">{task.disorder}</span>
+                      <span className="text-[10px] font-medium text-gray-600">{task.time}</span>
                     </div>
-                    <h3 className="text-2xl font-medium text-gray-900 mb-3">{task.title}</h3>
-                    <p className="text-gray-600 text-sm font-light leading-relaxed line-clamp-3">
+                    <h3 className="text-2xl font-semibold text-black mb-3">{task.title}</h3>
+                    <p className="text-sm font-normal text-gray-800 leading-relaxed line-clamp-3">
                       {task.description}
                     </p>
                   </div>
                   
                   <div className="flex justify-end mt-4">
-                    <button className="px-6 py-2 bg-gradient-to-r from-[#5F7A7B] to-[#4D6364] text-white rounded-full text-xs font-medium hover:shadow-lg transition-all">
+                    <button className="px-6 py-2 bg-gradient-to-r from-[#5F7A7B] to-[#4D6364] text-white rounded-full text-xs font-bold hover:shadow-lg transition-all">
                       Begin Assessment
                     </button>
                   </div>
@@ -363,7 +354,7 @@ function JournalWindow({ isOpen, onClose, userId }: { isOpen: boolean; onClose: 
           className="fixed inset-4 z-[70] bg-white shadow-2xl rounded-[2rem] border border-gray-100 flex overflow-hidden"
         >
           <div className="w-72 bg-gradient-to-b from-[#F9F9F7] to-[#F5F5F3] border-r border-gray-100 flex flex-col p-6">
-            <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-6">History</h3>
+            <h3 className="text-xs font-bold text-gray-700 uppercase tracking-[0.15em] mb-6">History</h3>
             <div className="flex-1 overflow-y-auto space-y-3">
               {history.map((entry) => (
                 <button 
@@ -372,7 +363,7 @@ function JournalWindow({ isOpen, onClose, userId }: { isOpen: boolean; onClose: 
                   className="w-full text-left p-4 rounded-2xl bg-white border border-gray-50 hover:border-[#5F7A7B] transition-all"
                 >
                   <p className="text-[10px] text-[#5F7A7B] font-bold mb-1">{new Date(entry.created_at).toLocaleDateString()}</p>
-                  <p className="text-xs text-gray-600 line-clamp-2">{entry.content}</p>
+                  <p className="text-xs font-normal text-gray-800 line-clamp-2">{entry.content}</p>
                 </button>
               ))}
             </div>
@@ -380,29 +371,29 @@ function JournalWindow({ isOpen, onClose, userId }: { isOpen: boolean; onClose: 
           
           <div className="flex-1 flex flex-col">
             <div className="p-8 flex justify-between items-center border-b border-gray-50">
-              <h2 className="text-2xl font-light text-gray-900 tracking-tight">Daily Reflection</h2>
-              <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full text-2xl text-gray-400">&times;</button>
+              <h2 className="text-2xl font-normal text-black tracking-tight">Daily Reflection</h2>
+              <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full text-2xl font-normal text-gray-600">&times;</button>
             </div>
             
             <textarea 
               value={journalText} 
               onChange={(e) => setJournalText(e.target.value)} 
               placeholder="What's on your mind?" 
-              className="flex-1 px-10 py-4 text-gray-800 outline-none resize-none bg-transparent font-light text-xl leading-relaxed" 
+              className="flex-1 px-10 py-4 text-black text-lg font-normal outline-none resize-none bg-transparent leading-relaxed placeholder:text-gray-400 placeholder:font-normal" 
             />
             
             <div className="p-8 border-t border-gray-50 flex justify-end gap-3">
               <button
                 onClick={() => analyzeJournals()}
                 disabled={analyzing || (!journalText.trim() && history.length === 0)}
-                className="px-10 py-3 bg-white border border-gray-200 text-gray-700 rounded-full text-sm font-medium hover:bg-[#F9F9F7] disabled:opacity-50 transition-all"
+                className="px-10 py-3 bg-white border border-gray-200 text-gray-900 text-sm font-medium rounded-full hover:bg-[#F9F9F7] disabled:opacity-50 transition-all"
               >
                 {analyzing ? 'Analyzing…' : 'Analyze'}
               </button>
               <button
                 onClick={saveJournal}
                 disabled={isLoading || !journalText.trim()}
-                className="px-10 py-3 bg-gradient-to-r from-[#5F7A7B] to-[#4D6364] text-white rounded-full text-sm font-medium hover:shadow-lg disabled:opacity-50 transition-all"
+                className="px-10 py-3 bg-gradient-to-r from-[#5F7A7B] to-[#4D6364] text-white rounded-full text-sm font-semibold hover:shadow-lg disabled:opacity-50 transition-all"
               >
                 {isLoading ? 'Holding this for you...' : 'Secure Reflection'}
               </button>
@@ -410,14 +401,14 @@ function JournalWindow({ isOpen, onClose, userId }: { isOpen: boolean; onClose: 
             
             {(analysis || analysisError) && (
               <div className="px-10 pb-4">
-                <div className="rounded-2xl border border-gray-100 bg-[#F9F9F7] p-4 text-xs text-gray-700">
-                  <div className="uppercase text-[10px] tracking-widest opacity-60 mb-2">Analysis</div>
+                <div className="rounded-2xl border border-gray-100 bg-[#F9F9F7] p-4 text-xs text-gray-900">
+                  <div className="uppercase text-[10px] font-bold tracking-[0.15em] opacity-60 mb-2">Analysis</div>
                   {!analysisError ? (
-                    <pre className="whitespace-pre-wrap break-words">
+                    <pre className="whitespace-pre-wrap break-words font-normal">
                       {typeof analysis === 'string' ? analysis : JSON.stringify(analysis, null, 2)}
                     </pre>
                   ) : (
-                    <div className="text-red-500">{analysisError}</div>
+                    <div className="text-red-500 font-medium">{analysisError}</div>
                   )}
                 </div>
               </div>
@@ -470,13 +461,23 @@ export default function Dashboard() {
     return top.v > 50 ? top.l : "Baseline Stable";
   };
 
+  const getSeverityColor = (severity: string) => {
+    const sev = severity?.toLowerCase() || '';
+    if (sev.includes('minimal') || sev.includes('none')) return 'from-emerald-500 to-teal-600';
+    if (sev.includes('mild')) return 'from-blue-500 to-indigo-600';
+    if (sev.includes('moderate')) return 'from-amber-500 to-orange-600';
+    if (sev.includes('moderately severe')) return 'from-orange-600 to-red-600';
+    if (sev.includes('severe')) return 'from-red-600 to-rose-700';
+    return 'from-[#5F7A7B] to-[#4D6364]';
+  };
+
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     router.push('/');
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#F9F9F7] via-[#FEFEFE] to-[#F5F5F3] flex flex-col relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-[#F9F9F7] via-[#FEFEFE] to-[#F5F5F3] flex flex-col relative overflow-hidden font-poppins">
       {/* Animated Background Elements */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-1/4 left-0 w-full h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent animate-pulse"></div>
@@ -505,7 +506,7 @@ export default function Dashboard() {
               <NavItem label="Journal" icon={<path d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />} />
             </button>
           </div>
-          <button onClick={handleSignOut} className="p-1.5 text-gray-400 hover:text-red-400 transition-colors">
+          <button onClick={handleSignOut} className="p-1.5 text-gray-500 hover:text-red-500 transition-colors">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9" />
             </svg>
@@ -516,23 +517,23 @@ export default function Dashboard() {
       <main className="flex-1 p-6 md:p-12 mt-12 md:mt-24 max-w-7xl mx-auto w-full pb-32 relative z-10">
         <header className="mb-12 flex justify-between items-end">
           <div>
-            <h1 className="text-4xl font-light text-gray-900 tracking-tight">Welcome, {user?.email?.split('@')[0]}</h1>
-            <p className="text-gray-500 font-light mt-1 text-sm italic">"Focus is the anchor of clarity."</p>
+            <h1 className="text-4xl font-light text-black tracking-tight leading-tight">Welcome, {user?.email?.split('@')[0]}</h1>
+            <p className="text-sm font-normal text-gray-600 mt-2 italic">Focus is the anchor of clarity.</p>
           </div>
-          <div className="bg-white px-6 py-2 rounded-full border border-gray-100 shadow-sm">
-            <p className="text-[10px] text-gray-400 uppercase tracking-widest mb-1">Status</p>
-            <p className="text-[#5F7A7B] font-medium text-sm">{getStatus()}</p>
+          <div className="bg-white px-6 py-3 rounded-full border border-gray-100 shadow-sm">
+            <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-[0.15em] mb-1">Status</p>
+            <p className="text-sm font-semibold text-[#5F7A7B]">{getStatus()}</p>
           </div>
         </header>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="md:col-span-2 bg-white p-10 rounded-[2.5rem] border border-gray-50 shadow-sm hover:shadow-md transition-shadow h-72">
-            <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-[0.2em] mb-8">Cognitive Index</h3>
+            <h3 className="text-xs font-bold text-gray-700 uppercase tracking-[0.15em] mb-8">Cognitive Index</h3>
             <div className="flex items-end justify-between h-32 gap-3 px-4">
               {[40, 70, 45, 90, 65, 80, 50, 60, 85].map((h, i) => (
                 <div 
                   key={i} 
-                  className="flex-1 bg-gradient-to-t from-[#5F7A7B] to-[#7A9A9B] rounded-full transition-all hover:opacity-80 cursor-pointer" 
+                  className="flex-1 bg-gradient-to-t from-[#5F7A7B] to-[#7A9A9B] rounded-full transition-all hover:opacity-80 cursor-pointer shadow-sm"
                   style={{ height: `${h}%` }}
                 ></div>
               ))}
@@ -540,8 +541,8 @@ export default function Dashboard() {
           </div>
 
           <div className="bg-gradient-to-br from-[#5F7A7B] to-[#4D6364] p-10 rounded-[2.5rem] text-white flex flex-col justify-between shadow-lg hover:shadow-xl transition-shadow">
-            <p className="text-[10px] opacity-60 uppercase tracking-widest">Priority Task</p>
-            <p className="text-xl font-light leading-snug">Complete your first Stroop assessment to baseline attention.</p>
+            <p className="text-[10px] font-semibold opacity-70 uppercase tracking-[0.15em]">Priority Task</p>
+            <p className="text-xl font-normal leading-snug">Complete your first Stroop assessment to baseline attention.</p>
             <button 
               onClick={() => setIsTaskOpen(true)} 
               className="mt-6 w-fit px-8 py-2.5 bg-white text-[#5F7A7B] rounded-full text-xs font-bold transition-all hover:shadow-xl active:scale-95"
@@ -550,12 +551,13 @@ export default function Dashboard() {
             </button>
           </div>
 
-          <MetricCard title="Streak" value="1" sub="Day 1 Started" />
-          <MetricCard title="Journal" value="+" sub="Update Daily" onClick={() => setIsJournalOpen(true)} />
+          <MetricCard title="Streak" value="1" sub="Day 1 Started" colorClass="from-[#5F7A7B] to-[#4D6364]" />
+          <MetricCard title="Journal" value="+" sub="Update Daily" onClick={() => setIsJournalOpen(true)} colorClass="from-[#5F7A7B] to-[#4D6364]" />
           <MetricCard 
-            title="Severity" 
-            value={results ? results.phq9_severity.charAt(0).toUpperCase() : "P"} 
-            sub={results ? `${results.phq9_severity} risk` : "Awaiting Data"} 
+            title="Risk Level" 
+            value={results ? results.phq9_severity.charAt(0).toUpperCase() : "?"} 
+            sub={results ? results.phq9_severity : "Awaiting Data"}
+            colorClass={results ? getSeverityColor(results.phq9_severity) : "from-[#5F7A7B] to-[#4D6364]"}
           />
         </div>
 
@@ -564,8 +566,8 @@ export default function Dashboard() {
           className="mt-8 bg-white p-10 rounded-[2.5rem] border border-gray-100 shadow-sm hover:shadow-md flex flex-col sm:flex-row justify-between items-center gap-6 cursor-pointer transition-all group"
         >
           <div className="text-center sm:text-left">
-            <h4 className="text-2xl font-light text-gray-900">Mindfulness & Tools</h4>
-            <p className="text-sm text-gray-500 font-light mt-1">Access clinical audio guides and focus enhancers.</p>
+            <h4 className="text-2xl font-normal text-black">Mindfulness & Tools</h4>
+            <p className="text-sm font-normal text-gray-600 mt-1">Access clinical audio guides and focus enhancers.</p>
           </div>
           <button className="p-5 bg-[#F9F9F7] rounded-full group-hover:bg-[#5F7A7B] transition-all">
              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="text-[#5F7A7B] group-hover:text-white transition-colors" strokeWidth="1.5">
@@ -609,22 +611,23 @@ export default function Dashboard() {
 
 function NavItem({ label, icon, active = false }: { label: string, icon: React.ReactNode, active?: boolean }) {
   return (
-    <div className={`flex flex-col md:flex-row items-center gap-1 md:gap-2.5 transition-all group px-2 py-1 ${active ? 'text-[#5F7A7B]' : 'text-gray-400 hover:text-[#5F7A7B]'}`}>
+    <div className={`flex flex-col md:flex-row items-center gap-1 md:gap-2.5 transition-all group px-2 py-1 ${active ? 'text-[#5F7A7B]' : 'text-gray-600 hover:text-[#5F7A7B]'}`}>
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">{icon}</svg>
-      <span className="text-[8px] md:text-[13px] font-medium tracking-wide uppercase">{label}</span>
+      <span className="text-[9px] md:text-xs font-semibold tracking-wide uppercase">{label}</span>
     </div>
   );
 }
 
-function MetricCard({ title, value, sub, onClick }: { title: string, value: string, sub: string, onClick?: () => void }) {
+function MetricCard({ title, value, sub, onClick, colorClass }: { title: string, value: string, sub: string, onClick?: () => void, colorClass?: string }) {
   return (
     <div 
       onClick={onClick} 
-      className={`bg-white p-10 rounded-[2.5rem] border border-gray-50 shadow-sm hover:shadow-md flex flex-col items-center justify-center space-y-2 transition-all group ${onClick ? 'cursor-pointer' : ''}`}
+      className={`bg-white p-10 rounded-[2.5rem] border border-gray-50 shadow-sm hover:shadow-md flex flex-col items-center justify-center space-y-3 transition-all group relative overflow-hidden ${onClick ? 'cursor-pointer' : ''}`}
     >
-      <p className="text-[10px] text-gray-400 uppercase tracking-widest">{title}</p>
-      <p className="text-5xl font-light text-gray-900 group-hover:text-[#5F7A7B] transition-colors">{value}</p>
-      <p className="text-[10px] text-[#5F7A7B] font-bold uppercase tracking-widest">{sub}</p>
+      <div className={`absolute inset-0 bg-gradient-to-br ${colorClass || 'from-[#5F7A7B] to-[#4D6364]'} opacity-0 group-hover:opacity-10 transition-opacity`}></div>
+      <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-[0.15em] relative z-10">{title}</p>
+      <p className={`text-6xl font-light bg-gradient-to-br ${colorClass || 'from-black to-gray-800'} bg-clip-text text-transparent relative z-10 leading-none`}>{value}</p>
+      <p className="text-[11px] font-bold text-gray-800 uppercase tracking-[0.12em] relative z-10">{sub}</p>
     </div>
   );
 }

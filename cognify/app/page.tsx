@@ -104,7 +104,7 @@ export default function LandingPage() {
             <span className='font-bold'> A gentle space </span> for cognitive enhancement.
             <div className='flex flex-row w-full gap-2 justify-center items-center'> 
               <div className='flex flex-row items-center gap-2'> 
-                Empowering your mental <Brain/> 
+                Empowering your mental 
               </div>
               well-being through
             </div> 
