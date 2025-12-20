@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import congnifyLogo from '../../../public/cognify_logo.png';
+import { MindfulnessWindow } from '@/app/components/Mindfulness';
 
 type ChatMessage = { role: 'user' | 'model'; content: string };
 
@@ -435,6 +436,7 @@ export default function Dashboard() {
   const [results, setResults] = useState<any>(null);
   const [isJournalOpen, setIsJournalOpen] = useState(false);
   const [isTaskOpen, setIsTaskOpen] = useState(false);
+  const [isMindfulnessOpen, setIsMindfulnessOpen] = useState(false);
   const supabase = createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
 
   
@@ -534,7 +536,7 @@ useEffect(() => {
           />
         </div>
 
-        <section className="mt-5 bg-white p-10 rounded-[2.5rem] border border-gray-100 shadow-sm flex flex-col sm:flex-row justify-between items-center gap-6">
+        {/* <section className="mt-5 bg-white p-10 rounded-[2.5rem] border border-gray-100 shadow-sm flex flex-col sm:flex-row justify-between items-center gap-6">
           <div className="text-center sm:text-left">
             <h4 className="text-2xl font-light text-gray-800">Mindfulness & Tools</h4>
             <p className="text-sm text-gray-400 font-light mt-1">Access clinical audio guides and focus enhancers.</p>
@@ -544,12 +546,29 @@ useEffect(() => {
                <path d="M9 18l6-6-6-6"/>
              </svg>
           </button>
-        </section>
+        </section> */}
+        
+        {/* NEW MINDFULNESS SECTION */}
+        <section 
+          onClick={() => setIsMindfulnessOpen(true)}
+          className="mt-8 bg-white p-10 rounded-[2.5rem] border border-gray-100 shadow-sm flex flex-col sm:flex-row justify-between items-center gap-6 cursor-pointer hover:shadow-md transition-all group"
+        >
+          <div className="text-center sm:text-left">
+            <h4 className="text-2xl font-light text-gray-800">Mindfulness & Tools</h4>
+            <p className="text-sm text-gray-400 font-light mt-1">Access clinical audio guides and focus enhancers.</p>
+          </div>
+          <button className="p-5 bg-[#F9F9F7] rounded-full group-hover:bg-[#5F7A7B] transition-all">
+             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="text-[#5F7A7B] group-hover:text-white transition-colors" strokeWidth="1.5">
+               <path d="M9 18l6-6-6-6"/>
+             </svg>
+          </button>
+        </section>  
       </main>
 
       <ChatAssistant />
       <TaskWindow isOpen={isTaskOpen} onClose={() => setIsTaskOpen(false)} />
       <JournalWindow isOpen={isJournalOpen} onClose={() => setIsJournalOpen(false)} userId={user?.id} />
+      <MindfulnessWindow isOpen={isMindfulnessOpen} onClose={() => setIsMindfulnessOpen(false)} />
     </div>
   );
 }
