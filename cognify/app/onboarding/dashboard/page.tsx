@@ -537,6 +537,16 @@ export default function Dashboard() {
     setAudioState(prev => ({ ...prev, isPlaying: !prev.isPlaying }));
   };
 
+  const handleClosePlayer = () => {
+    setActiveTrack(null);
+    setAudioState(prev => ({
+      ...prev,
+      activeTrack: null,
+      activePack: null,
+      isPlaying: false
+    }));
+  };
+
   useEffect(() => {
     const getData = async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -697,6 +707,7 @@ export default function Dashboard() {
           onPlayingChange={(playing) => updateAudioState({ isPlaying: playing })}
           onTimeUpdate={(time) => updateAudioState({ currentTime: time })}
           onDurationChange={(duration) => updateAudioState({ duration })}
+          onClose={handleClosePlayer}
         />
 
       <style jsx>{`

@@ -8,7 +8,8 @@ export const FloatingPlayer = React.forwardRef<HTMLAudioElement, {
   isPlaying?: boolean,
   onPlayingChange?: (playing: boolean) => void,
   onTimeUpdate?: (time: number) => void,
-  onDurationChange?: (duration: number) => void
+  onDurationChange?: (duration: number) => void,
+  onClose?: () => void
 }>(function FloatingPlayer(
   { 
     track, 
@@ -16,7 +17,8 @@ export const FloatingPlayer = React.forwardRef<HTMLAudioElement, {
     isPlaying,
     onPlayingChange,
     onTimeUpdate,
-    onDurationChange
+    onDurationChange,
+    onClose
   },
   ref
 ) {
@@ -134,6 +136,17 @@ export const FloatingPlayer = React.forwardRef<HTMLAudioElement, {
               <span>10s</span>
               <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M15 14l4-4m0 0l-4-4m4 4H6a4 4 0 000 8"/></svg>
             </button>
+
+            {onClose && (
+              <button 
+                onClick={onClose}
+                className="ml-2 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-all"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 6L6 18M6 6l12 12" />
+                </svg>
+              </button>
+            )}
           </div>
         </div>
 
