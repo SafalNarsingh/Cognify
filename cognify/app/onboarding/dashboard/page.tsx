@@ -56,6 +56,7 @@ function ChatAssistant() {
   const [history, setHistory] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isTaskActive, setIsTaskActive] = useState(false);
   // const [activeTrack, setActiveTrack] = useState<{track: string, pack: string} | null>(null); 
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
@@ -189,6 +190,7 @@ function ChatAssistant() {
 }
 
 function TaskWindow({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+  const router = useRouter();
   const tasks = [
     {
       id: 1,
@@ -211,11 +213,11 @@ function TaskWindow({ isOpen, onClose }: { isOpen: boolean; onClose: () => void 
     {
       id:3,
       title:"Flanker",
-         disorder: "Attention Deficit / Executive Function",
+      disorder: "Attention Deficit / Executive Function",
       description: "Assess your ability to inhibit cognitive interference. Name the color of the word rather than reading the word itself.",
       image: "https://images.unsplash.com/photo-1509228468518-180dd4864904?auto=format&fit=crop&q=80&w=800",
       time: "5 mins",
-      link: "/flanker"
+      link: "/onboarding/dashboard/flanker"
     }
   ];
 
@@ -241,6 +243,7 @@ function TaskWindow({ isOpen, onClose }: { isOpen: boolean; onClose: () => void 
               <motion.div 
                 key={task.id}
                 whileHover={{ y: -5 }}
+                onClick={() => router.push(task.link)}
                 className="bg-white rounded-[2rem] border border-gray-100 shadow-sm hover:shadow-md overflow-hidden flex flex-col md:flex-row h-auto md:h-64 group cursor-pointer transition-all"
               >
                 <div className="w-full md:w-1/3 h-48 md:h-full relative overflow-hidden">
@@ -473,6 +476,8 @@ export default function Dashboard() {
   const [activeTrack, setActiveTrack] = useState<{track: string, pack: string} | null>(null);
   const audioRef = useRef<HTMLAudioElement>(null!);
   const [audioState, setAudioState] = useState({
+
+    
   isPlaying: false,
   currentTime: 0,
   duration: 0,
@@ -582,6 +587,18 @@ export default function Dashboard() {
     getData();
   }, [router, supabase]);
 
+  useEffect(() => {
+    // Check if the URL has ?open=tasks
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('open') === 'tasks') {
+      setIsTaskOpen(true);
+      
+      // Clean up the URL so refreshing doesn't keep it open forever
+      const newRelativePathQuery = window.location.pathname;
+      history.replaceState(null, '', newRelativePathQuery);
+    }
+  }, []);
+
   const getStatus = () => {
     if (!results) return "Analyzing profile...";
     const scores = [
@@ -597,157 +614,173 @@ export default function Dashboard() {
     await supabase.auth.signOut();
     router.push('/');
   };
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-[#F9F9F7] via-[#FEFEFE] to-[#F5F5F3] flex flex-col relative overflow-hidden">
-      {/* Animated Background Elements */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-1/4 left-0 w-full h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent animate-pulse"></div>
-        <div className="absolute top-3/4 left-0 w-full h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent animate-pulse" style={{ animationDelay: '1s' }}></div>
-        <div className="absolute top-0 left-1/4 w-px h-full bg-gradient-to-b from-transparent via-gray-300 to-transparent animate-pulse" style={{ animationDelay: '0.5s' }}></div>
-        <div className="absolute top-0 right-1/4 w-px h-full bg-gradient-to-b from-transparent via-gray-300 to-transparent animate-pulse" style={{ animationDelay: '1.5s' }}></div>
-        <div className="absolute top-20 left-10 w-32 h-16 border-2 border-gray-300 rounded-t-full animate-float opacity-20"></div>
-        <div className="absolute top-1/3 right-16 w-40 h-20 border-2 border-[#5F7A7B] opacity-10 rounded-b-full animate-float-delayed"></div>
-        <div className="absolute bottom-1/4 left-1/3 w-24 h-12 border-2 border-gray-300 rounded-t-full animate-float opacity-20" style={{ animationDelay: '2s' }}></div>
-        <div className="absolute top-32 right-32 w-20 h-20 border border-dashed border-gray-300 rounded-full animate-spin-slow opacity-15"></div>
-      </div>
-
-      <nav className="fixed left-0 right-0 z-50 flex justify-center px-6 bottom-5 md:bottom-auto md:top-6">
-        <div className="bg-white/80 backdrop-blur-xl border border-white/60 shadow-lg rounded-full px-6 py-2 flex items-center justify-between w-full max-w-2xl gap-3">
-          <div className="hidden sm:block">
-            <div className="text-xl flex flex-row gap-1 text-[#5F7A7B] font-bold"><BrainCircuitIcon /> Cognify</div>
-          </div>
-          <div className="flex flex-1 justify-around md:justify-center items-center gap-1 md:gap-8">
-            <NavItem label="Overview" active icon={<path d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18v-2.25Z" />} />
-            
-            <button onClick={() => setIsTaskOpen(true)} className="hover:opacity-80 transition-opacity">
-              <NavItem label="Tasks" icon={<path d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />} />
-            </button>
-
-            <button onClick={() => setIsJournalOpen(true)} className="hover:opacity-80 transition-opacity">
-              <NavItem label="Journal" icon={<path d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />} />
-            </button>
-          </div>
-          <button onClick={handleSignOut} className="p-1.5 text-gray-400 hover:text-red-400 transition-colors">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9" />
-            </svg>
-          </button>
-        </div>
-      </nav>
-
-      <main className="flex-1 p-6 md:p-12 mt-12 md:mt-24 max-w-7xl mx-auto w-full pb-32 relative z-10">
-        <header className="mb-12 flex justify-between items-end">
-          <div>
-            <h1 className="text-4xl font-light text-gray-900 tracking-tight">Welcome, {user?.email?.split('@')[0]}</h1>
-            <p className="text-gray-500 font-light mt-1 text-sm italic">"Focus is the anchor of clarity."</p>
-          </div>
-          <div className="bg-white px-6 py-2 rounded-full border border-gray-100 shadow-sm">
-            <p className="text-[10px] text-gray-400 uppercase tracking-widest mb-1">Status</p>
-            <p className="text-[#5F7A7B] font-medium text-sm">{getStatus()}</p>
-          </div>
-        </header>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="md:col-span-2 bg-white p-10 rounded-[2.5rem] border border-gray-50 shadow-sm hover:shadow-md transition-shadow h-72">
-            <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-[0.2em] mb-8">Cognitive Index</h3>
-            <div className="flex items-end justify-between h-32 gap-3 px-4">
-              {[40, 70, 45, 90, 65, 80, 50, 60, 85].map((h, i) => (
-                <div 
-                  key={i} 
-                  className="flex-1 bg-gradient-to-t from-[#5F7A7B] to-[#7A9A9B] rounded-full transition-all hover:opacity-80 cursor-pointer" 
-                  style={{ height: `${h}%` }}
-                ></div>
-              ))}
-            </div>
-          </div>
-
-          <div className="bg-gradient-to-br from-[#5F7A7B] to-[#4D6364] p-10 rounded-[2.5rem] text-white flex flex-col justify-between shadow-lg hover:shadow-xl transition-shadow">
-            <p className="text-[10px] opacity-60 uppercase tracking-widest">Priority Task</p>
-            <p className="text-xl font-light leading-snug">Complete your first Stroop assessment to baseline attention.</p>
-            <button 
-              onClick={() => setIsTaskOpen(true)} 
-              className="mt-6 w-fit px-8 py-2.5 bg-white text-[#5F7A7B] rounded-full text-xs font-bold transition-all hover:shadow-xl active:scale-95"
-            >
-              Start Now
-            </button>
-          </div>
-
-          {/* <MetricCard title="Daily Streak" value="1" sub="Day Started" /> */}
-          <MetricCard title="Daily Streak" value={String(streak)} sub={streak > 1 ? 'Consecutive Days' : 'Day Started'} />
-          <div onClick={() => setIsJournalOpen(true)} className="cursor-pointer">
-            <MetricCard title="Journaling" value="+" sub="Tap to write entry" />
-          </div>
-          <MetricCard 
-            title="Severity" 
-            value={results ? results.phq9_severity.charAt(0).toUpperCase() : "P"} 
-            sub={results ? `${results.phq9_severity} risk` : "Awaiting Data"} 
-          />
-        </div>
-
-        <section 
-          onClick={() => setIsMindfulnessOpen(true)}
-          className="mt-8 bg-white p-10 rounded-[2.5rem] border border-gray-100 shadow-sm hover:shadow-md flex flex-col sm:flex-row justify-between items-center gap-6 cursor-pointer transition-all group"
+return (
+  <div className="min-h-screen bg-gradient-to-br from-[#F9F9F7] via-[#FEFEFE] to-[#F5F5F3] flex flex-col relative overflow-hidden">
+    
+    <AnimatePresence mode="wait">
+      {!isTaskOpen ? (
+        /* --- DASHBOARD VIEW --- */
+        <motion.div 
+          key="dashboard"
+          initial={{ opacity: 0, x: -10 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -10 }}
+          className="flex flex-col flex-1"
         >
-          <div className="text-center sm:text-left">
-            <h4 className="text-2xl font-light text-gray-900">Mindfulness & Tools</h4>
-            <p className="text-sm text-gray-500 font-light mt-1">Access clinical audio guides and focus enhancers.</p>
+          {/* Animated Background Elements */}
+          <div className="absolute inset-0 pointer-events-none">
+            <div className="absolute top-1/4 left-0 w-full h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent animate-pulse"></div>
+            <div className="absolute top-3/4 left-0 w-full h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent animate-pulse" style={{ animationDelay: '1s' }}></div>
+            <div className="absolute top-0 left-1/4 w-px h-full bg-gradient-to-b from-transparent via-gray-300 to-transparent animate-pulse" style={{ animationDelay: '0.5s' }}></div>
+            <div className="absolute top-0 right-1/4 w-px h-full bg-gradient-to-b from-transparent via-gray-300 to-transparent animate-pulse" style={{ animationDelay: '1.5s' }}></div>
+            <div className="absolute top-20 left-10 w-32 h-16 border-2 border-gray-300 rounded-t-full animate-float opacity-20"></div>
+            <div className="absolute top-1/3 right-16 w-40 h-20 border-2 border-[#5F7A7B] opacity-10 rounded-b-full animate-float-delayed"></div>
+            <div className="absolute bottom-1/4 left-1/3 w-24 h-12 border-2 border-gray-300 rounded-t-full animate-float opacity-20" style={{ animationDelay: '2s' }}></div>
+            <div className="absolute top-32 right-32 w-20 h-20 border border-dashed border-gray-300 rounded-full animate-spin-slow opacity-15"></div>
           </div>
-          <button className="p-5 bg-[#F9F9F7] rounded-full group-hover:bg-[#5F7A7B] transition-all">
-             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="text-[#5F7A7B] group-hover:text-white transition-colors" strokeWidth="1.5">
-               <path d="M9 18l6-6-6-6"/>
-             </svg>
-          </button>
-        </section>  
-        </main>
 
-        <ChatAssistant />
-        <TaskWindow isOpen={isTaskOpen} onClose={() => setIsTaskOpen(false)} />
-        <JournalWindow isOpen={isJournalOpen} onClose={() => setIsJournalOpen(false)} userId={user?.id} />
-       <MindfulnessWindow 
-          isOpen={isMindfulnessOpen} 
-          onClose={() => setIsMindfulnessOpen(false)} 
-          onPlay={handleNewTrack}
-          audioState={audioState}
-          onTogglePlay={togglePlayback}
-          audioRef={audioRef}
-        />
-        <FloatingPlayer 
-          ref={audioRef}
-          track={activeTrack?.track || null} 
-          pack={activeTrack?.pack || null}
-          isPlaying={audioState.isPlaying}
-          onPlayingChange={(playing) => updateAudioState({ isPlaying: playing })}
-          onTimeUpdate={(time) => updateAudioState({ currentTime: time })}
-          onDurationChange={(duration) => updateAudioState({ duration })}
-          onClose={handleClosePlayer}
-        />
+          <nav className="fixed left-0 right-0 z-50 flex justify-center px-6 bottom-5 md:bottom-auto md:top-6">
+            <div className="bg-white/80 backdrop-blur-xl border border-white/60 shadow-lg rounded-full px-6 py-2 flex items-center justify-between w-full max-w-2xl gap-3">
+              <div className="hidden sm:block">
+                <div className="text-xl flex flex-row gap-1 text-[#5F7A7B] font-bold"><BrainCircuitIcon /> Cognify</div>
+              </div>
+              <div className="flex flex-1 justify-around md:justify-center items-center gap-1 md:gap-8">
+                <NavItem label="Overview" active icon={<path d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18v-2.25Z" />} />
+                <button onClick={() => setIsTaskOpen(true)} className="hover:opacity-80 transition-opacity">
+                  <NavItem label="Tasks" icon={<path d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />} />
+                </button>
+                <button onClick={() => setIsJournalOpen(true)} className="hover:opacity-80 transition-opacity">
+                  <NavItem label="Journal" icon={<path d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />} />
+                </button>
+              </div>
+              <button onClick={handleSignOut} className="p-1.5 text-gray-400 hover:text-red-400 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9" />
+                </svg>
+              </button>
+            </div>
+          </nav>
 
-      <style jsx>{`
-        @keyframes float {
-          0%, 100% { transform: translateY(0px); }
-          50% { transform: translateY(-20px); }
-        }
-        @keyframes float-delayed {
-          0%, 100% { transform: translateY(0px); }
-          50% { transform: translateY(-15px); }
-        }
-        .animate-float {
-          animation: float 6s ease-in-out infinite;
-        }
-        .animate-float-delayed {
-          animation: float-delayed 8s ease-in-out infinite;
-        }
-        .animate-spin-slow {
-          animation: spin 20s linear infinite;
-        }
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
-    </div>
-  );
+          <main className="flex-1 p-6 md:p-12 mt-12 md:mt-24 max-w-7xl mx-auto w-full pb-32 relative z-10">
+            <header className="mb-12 flex justify-between items-end">
+              <div>
+                <h1 className="text-4xl font-light text-gray-900 tracking-tight">Welcome, {user?.email?.split('@')[0]}</h1>
+                <p className="text-gray-500 font-light mt-1 text-sm italic">"Focus is the anchor of clarity."</p>
+              </div>
+              <div className="bg-white px-6 py-2 rounded-full border border-gray-100 shadow-sm">
+                <p className="text-[10px] text-gray-400 uppercase tracking-widest mb-1">Status</p>
+                <p className="text-[#5F7A7B] font-medium text-sm">{getStatus()}</p>
+              </div>
+            </header>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="md:col-span-2 bg-white p-10 rounded-[2.5rem] border border-gray-50 shadow-sm hover:shadow-md transition-shadow h-72">
+                <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-[0.2em] mb-8">Cognitive Index</h3>
+                <div className="flex items-end justify-between h-32 gap-3 px-4">
+                  {[40, 70, 45, 90, 65, 80, 50, 60, 85].map((h, i) => (
+                    <div key={i} className="flex-1 bg-gradient-to-t from-[#5F7A7B] to-[#7A9A9B] rounded-full transition-all hover:opacity-80 cursor-pointer" style={{ height: `${h}%` }}></div>
+                  ))}
+                </div>
+              </div>
+
+              {/* UPDATED PRIORITY CARD */}
+              <div className="bg-gradient-to-br from-[#5F7A7B] to-[#4D6364] p-10 rounded-[2.5rem] text-white flex flex-col justify-between shadow-lg hover:shadow-xl transition-shadow">
+                <p className="text-[10px] opacity-60 uppercase tracking-widest">Priority Task</p>
+                <p className="text-xl font-light leading-snug">Complete your first Flanker assessment to baseline ADHD inhibitory control.</p>
+                <button 
+                  onClick={() => setIsTaskOpen(true)} 
+                  className="mt-6 w-fit px-8 py-2.5 bg-white text-[#5F7A7B] rounded-full text-xs font-bold transition-all hover:shadow-xl active:scale-95"
+                >
+                  Start Now
+                </button>
+              </div>
+
+              <MetricCard title="Daily Streak" value={String(streak)} sub={streak > 1 ? 'Consecutive Days' : 'Day Started'} />
+              <div onClick={() => setIsJournalOpen(true)} className="cursor-pointer">
+                <MetricCard title="Journaling" value="+" sub="Tap to write entry" />
+              </div>
+              <MetricCard 
+                title="Severity" 
+                value={results ? results.phq9_severity.charAt(0).toUpperCase() : "P"} 
+                sub={results ? `${results.phq9_severity} risk` : "Awaiting Data"} 
+              />
+            </div>
+
+            <section onClick={() => setIsMindfulnessOpen(true)} className="mt-8 bg-white p-10 rounded-[2.5rem] border border-gray-100 shadow-sm hover:shadow-md flex flex-col sm:flex-row justify-between items-center gap-6 cursor-pointer transition-all group">
+              <div className="text-center sm:text-left">
+                <h4 className="text-2xl font-light text-gray-900">Mindfulness & Tools</h4>
+                <p className="text-sm text-gray-500 font-light mt-1">Access clinical audio guides and focus enhancers.</p>
+              </div>
+              <button className="p-5 bg-[#F9F9F7] rounded-full group-hover:bg-[#5F7A7B] transition-all">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="text-[#5F7A7B] group-hover:text-white transition-colors" strokeWidth="1.5">
+                    <path d="M9 18l6-6-6-6"/>
+                  </svg>
+              </button>
+            </section>   
+          </main>
+        </motion.div>
+      ) : (
+        /* --- EXPERIMENT VIEW (FLANKER TASK) --- */
+        <motion.div 
+          key="flanker-task"
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: 20 }}
+          className="flex-1 flex flex-col items-center justify-center p-6"
+        >
+          {/* <FlankerTask onBack={() => setIsTaskActive(false)} /> */}
+        </motion.div>
+      )}
+    </AnimatePresence>
+
+    {/* OVERLAYS & MODALS */}
+    <ChatAssistant />
+    <TaskWindow isOpen={isTaskOpen} onClose={() => setIsTaskOpen(false)} />
+    <JournalWindow isOpen={isJournalOpen} onClose={() => setIsJournalOpen(false)} userId={user?.id} />
+    <MindfulnessWindow 
+      isOpen={isMindfulnessOpen} 
+      onClose={() => setIsMindfulnessOpen(false)} 
+      onPlay={handleNewTrack}
+      audioState={audioState}
+      onTogglePlay={togglePlayback}
+      audioRef={audioRef}
+    />
+    <FloatingPlayer 
+      ref={audioRef}
+      track={activeTrack?.track || null} 
+      pack={activeTrack?.pack || null}
+      isPlaying={audioState.isPlaying}
+      onPlayingChange={(playing) => updateAudioState({ isPlaying: playing })}
+      onTimeUpdate={(time) => updateAudioState({ currentTime: time })}
+      onDurationChange={(duration) => updateAudioState({ duration })}
+      onClose={handleClosePlayer}
+    />
+
+    <style jsx>{`
+      @keyframes float {
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(-20px); }
+      }
+      @keyframes float-delayed {
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(-15px); }
+      }
+      .animate-float {
+        animation: float 6s ease-in-out infinite;
+      }
+      .animate-float-delayed {
+        animation: float-delayed 8s ease-in-out infinite;
+      }
+      .animate-spin-slow {
+        animation: spin 20s linear infinite;
+      }
+      @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+    `}</style>
+  </div>
+);
 }
 
 function NavItem({ label, icon, active = false }: { label: string, icon: React.ReactNode, active?: boolean }) {
