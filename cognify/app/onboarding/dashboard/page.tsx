@@ -7,6 +7,7 @@ import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import congnifyLogo from '../../../public/cognify_logo.png';
 import { MindfulnessWindow } from '@/app/components/Mindfulness';
+import { FloatingPlayer } from '@/app/components/FloatingPlayer'; // Check your folder path
 
 type ChatMessage = { role: 'user' | 'model'; content: string };
 
@@ -53,6 +54,7 @@ function ChatAssistant() {
   const [history, setHistory] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  // const [activeTrack, setActiveTrack] = useState<{track: string, pack: string} | null>(null); 
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -455,6 +457,15 @@ export default function Dashboard() {
   const [isJournalOpen, setIsJournalOpen] = useState(false);
   const [isTaskOpen, setIsTaskOpen] = useState(false); // New state
   const [streak, setStreak] = useState<number>(0);
+  const [activeTrack, setActiveTrack] = useState<{track: string, pack: string} | null>(null);
+  const audioRef = useRef<HTMLAudioElement>(null!);
+  const [audioState, setAudioState] = useState({
+  isPlaying: false,
+  currentTime: 0,
+  duration: 0,
+  activeTrack: null as string | null,
+  activePack: null as string | null
+});
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -508,6 +519,23 @@ export default function Dashboard() {
 
   const [isMindfulnessOpen, setIsMindfulnessOpen] = useState(false);
 
+  const handleNewTrack = (track: string, pack: string) => {
+    setActiveTrack({ track, pack });
+    setAudioState(prev => ({
+      ...prev,
+      activeTrack: track,
+      activePack: pack,
+      isPlaying: true
+    }));
+  };
+
+  const updateAudioState = (state: Partial<typeof audioState>) => {
+    setAudioState(prev => ({ ...prev, ...state }));
+  };
+
+  const togglePlayback = () => {
+    setAudioState(prev => ({ ...prev, isPlaying: !prev.isPlaying }));
+  };
 
   useEffect(() => {
     const getData = async () => {
@@ -648,12 +676,28 @@ export default function Dashboard() {
              </svg>
           </button>
         </section>  
-      </main>
+        </main>
 
-      <ChatAssistant />
-      <TaskWindow isOpen={isTaskOpen} onClose={() => setIsTaskOpen(false)} />
-      <JournalWindow isOpen={isJournalOpen} onClose={() => setIsJournalOpen(false)} userId={user?.id} />
-      <MindfulnessWindow isOpen={isMindfulnessOpen} onClose={() => setIsMindfulnessOpen(false)} />
+        <ChatAssistant />
+        <TaskWindow isOpen={isTaskOpen} onClose={() => setIsTaskOpen(false)} />
+        <JournalWindow isOpen={isJournalOpen} onClose={() => setIsJournalOpen(false)} userId={user?.id} />
+       <MindfulnessWindow 
+          isOpen={isMindfulnessOpen} 
+          onClose={() => setIsMindfulnessOpen(false)} 
+          onPlay={handleNewTrack}
+          audioState={audioState}
+          onTogglePlay={togglePlayback}
+          audioRef={audioRef}
+        />
+        <FloatingPlayer 
+          ref={audioRef}
+          track={activeTrack?.track || null} 
+          pack={activeTrack?.pack || null}
+          isPlaying={audioState.isPlaying}
+          onPlayingChange={(playing) => updateAudioState({ isPlaying: playing })}
+          onTimeUpdate={(time) => updateAudioState({ currentTime: time })}
+          onDurationChange={(duration) => updateAudioState({ duration })}
+        />
 
       <style jsx>{`
         @keyframes float {

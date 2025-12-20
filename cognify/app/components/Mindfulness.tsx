@@ -2,86 +2,209 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useRef, useEffect } from 'react';
 
-// --- DATA STRUCTURE ---
 const MINDFULNESS_DATA = [
+
   {
+
     id: "intro",
+
     title: "Introduction to Meditation",
+
     description: "The foundations of mindful practice.",
+
     topics: ["Welcome", "What is mindfulness", "What is meditation", "Is it for me?", "Setup"]
+
   },
+
   {
+
     id: "beginner",
+
     title: "Beginner Meditation Course",
+
     description: "Start your journey into presence.",
+
     topics: ["Your first session", "Mindfulness", "Vipassana", "Non-judgment", "Mindful Living", "Science of meditation", "The present moment", "Negative emotions", "Sounds"]
+
   },
+
   {
+
     id: "intermediate",
+
     title: "Intermediate Meditation Course",
+
     description: "Deepen your understanding of self.",
+
     topics: ["Introduction", "Spontaneity of thoughts", "The self", "Consciousness", "Anxiety", "Minimal living", "Ego Dissolution", "Stress", "Open Awareness", "Free will"]
+
   },
+
   {
+
     id: "stress",
+
     title: "Meditation for Stress & Anxiety",
+
     description: "Tools for finding peace in chaos.",
+
     topics: ["Meditation for stress & anxiety", "Managing anxiety", "Managing stress", "Labelling thoughts & feelings", "Finding peace in the present moment", "Recognising unhelpful thoughts", "Dealing with stressful situations", "Labelling physical sensations", "Understanding anxiety", "Negative emotions"]
+
   },
+
   {
+
     id: "sleep",
+
     title: "Meditation for Sleep",
+
     description: "Restorative guides for rest.",
+
     topics: ["Gradual muscle relaxation", "Mindful breathing", "Visualisation", "Body Scan", "Mantra for Sleep"]
+
   },
+
   {
+
     id: "work",
+
     title: "Work Life Meditation Pack",
+
     description: "Focus and productivity at work.",
+
     topics: ["Managing Conflict", "Managing Stress", "Productivity", "Confidence", "Creativity", "Focus", "Work-life balance", "Motivation", "Dealing with change", "Prioritization"]
+
   },
+
   {
+
     id: "walking",
+
     title: "Walking Meditation",
+
     description: "Mindfulness in motion.",
+
     topics: ["Walking Inside", "Walking Outside"]
+
   },
+
   {
+
     id: "thinkers",
+
     title: "Meditating with Great Thinkers",
+
     description: "Wisdom from history's minds.",
+
     topics: ["William James", "Rene Descartes", "William Shakespeare", "Alan Watts", "William Blake"]
+
   },
+
   {
+
     id: "bodyscan",
+
     title: "Body Scan Meditation",
+
     description: "Connect with physical sensations.",
+
     topics: ["Your first body scan", "Positions", "Sensations", "Body scan meditation by UCLA", "Simple body scan 1", "Simple body scan 2", "Simple body scan 3", "Body scan for sleep"]
+
   },
+
   {
+
     id: "mantra",
+
     title: "Mantra Meditation",
+
     description: "Channeling focus through sound.",
+
     topics: ["Your first mantra", "Choose your own mantra", "Simple mantra 1", "Simple mantra 2", "Mantra for Sleep"]
+
   },
+
   {
+
     id: "lovingkindness",
+
     title: "Loving Kindness Meditation",
+
     description: "Developing compassion for all.",
+
     topics: ["Self compassion", "Compassion for others", "Compassion for all", "Loving kindness by UCLA", "Loving Kindness by Giovanni Dienstmann"]
+
   }
+
 ];
 
-export function MindfulnessWindow({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+interface MindfulnessProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onPlay: (trackName: string, packName: string) => void;
+  audioState?: {
+    isPlaying: boolean;
+    currentTime: number;
+    duration: number;
+    activeTrack: string | null;
+  };
+  onTogglePlay?: () => void;
+  audioRef?: React.RefObject<HTMLAudioElement>;
+}
+
+export function MindfulnessWindow({ 
+  isOpen, 
+  onClose, 
+  onPlay, 
+  audioState,
+  onTogglePlay,
+  audioRef
+}: MindfulnessProps) {
   const [view, setView] = useState<'list' | 'topics' | 'player'>('list');
   const [selectedPack, setSelectedPack] = useState<any>(null);
   const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
 
+  const formatTime = (time: number) => {
+    if (isNaN(time)) return "00:00";
+    const mins = Math.floor(time / 60);
+    const secs = Math.floor(time % 60);
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
   const resetAndClose = () => {
     onClose();
-    setTimeout(() => { setView('list'); setSelectedPack(null); }, 300);
+    setTimeout(() => { 
+      setView('list'); 
+      setSelectedPack(null); 
+      setSelectedTopic(null);
+    }, 300);
   };
+
+  const handleSeek = (newTime: number) => {
+    if (audioRef?.current) {
+      audioRef.current.currentTime = newTime;
+    }
+  };
+
+  const handleForward = () => {
+    if (audioRef?.current) {
+      audioRef.current.currentTime += 10;
+    }
+  };
+
+  const handleBackward = () => {
+    if (audioRef?.current) {
+      audioRef.current.currentTime -= 10;
+    }
+  };
+
+  // Logic to determine if the track in the player view is the one currently playing
+  const isCurrentTrackActive = audioState?.activeTrack === selectedTopic;
+  const progressPercent = audioState?.duration 
+    ? (audioState.currentTime / audioState.duration) * 100 
+    : 0;
 
   return (
     <AnimatePresence>
@@ -99,7 +222,7 @@ export function MindfulnessWindow({ isOpen, onClose }: { isOpen: boolean; onClos
               <div>
                 <button 
                   onClick={() => view === 'player' ? setView('topics') : view === 'topics' ? setView('list') : null}
-                  className={`text-[10px] font-bold uppercase tracking-[0.2em] mb-1 transition-all ${view === 'list' ? 'text-gray-300' : 'text-[#5F7A7B] hover:opacity-70'}`}
+                  className={`text-[10px] font-bold uppercase tracking-[0.2em] mb-1 transition-all ${view === 'list' ? 'text-gray-300 pointer-events-none' : 'text-[#5F7A7B] hover:opacity-70'}`}
                 >
                   {view === 'list' ? 'Mindfulness & Tools' : '← Back'}
                 </button>
@@ -107,11 +230,11 @@ export function MindfulnessWindow({ isOpen, onClose }: { isOpen: boolean; onClos
                   {view === 'list' ? 'Clinical Audio Library' : selectedPack?.title}
                 </h3>
               </div>
-              <button onClick={resetAndClose} className="p-2 hover:bg-gray-100 rounded-full transition-all text-gray-400">&times;</button>
+              <button onClick={resetAndClose} className="p-3 hover:bg-gray-100 rounded-full transition-all text-gray-400 text-2xl">&times;</button>
             </div>
 
             {/* Content Area */}
-            <div className="flex-1 overflow-y-auto p-8">
+            <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
               {view === 'list' && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {MINDFULNESS_DATA.map((pack) => (
@@ -133,7 +256,7 @@ export function MindfulnessWindow({ isOpen, onClose }: { isOpen: boolean; onClos
                     <button 
                       key={topic}
                       onClick={() => { setSelectedTopic(topic); setView('player'); }}
-                      className="w-full p-5 text-left border-b border-gray-50 hover:bg-[#F9F9F7] transition-all flex justify-between items-center group"
+                      className="w-full p-5 text-left border-b border-gray-50 hover:bg-[#F9F9F7] transition-all flex justify-between items-center group rounded-xl"
                     >
                       <span className="text-sm font-light text-gray-600 group-hover:text-gray-900">{topic}</span>
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className="text-gray-300 group-hover:text-[#5F7A7B]"><path d="M8 5v14l11-7z"/></svg>
@@ -144,33 +267,73 @@ export function MindfulnessWindow({ isOpen, onClose }: { isOpen: boolean; onClos
 
               {view === 'player' && (
                 <div className="h-full flex flex-col items-center justify-center text-center space-y-8 animate-in fade-in zoom-in duration-500">
-                  <div className="w-48 h-48 bg-[#F9F9F7] rounded-[2rem] flex items-center justify-center shadow-inner">
-                    <div className="w-24 h-24 bg-[#5F7A7B]/10 rounded-full flex items-center justify-center animate-pulse">
+                  <div className="w-48 h-48 bg-[#F9F9F7] rounded-[3rem] flex items-center justify-center shadow-inner relative overflow-hidden">
+                    <div className={`w-24 h-24 bg-[#5F7A7B]/10 rounded-full flex items-center justify-center ${audioState?.isPlaying && isCurrentTrackActive ? 'animate-pulse' : ''}`}>
                         <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#5F7A7B" strokeWidth="1" className="opacity-50">
                             <path d="M12 1v22M17 5v14M7 5v14M2 9v6M22 9v6"/>
                         </svg>
                     </div>
                   </div>
+                  
                   <div>
-                    <h4 className="text-xl font-medium text-gray-800">{selectedTopic}</h4>
-                    <p className="text-xs text-gray-400 uppercase tracking-widest mt-2">{selectedPack?.title}</p>
+                    <h4 className="text-2xl font-light text-gray-800 tracking-tight">{selectedTopic}</h4>
+                    <p className="text-xs text-[#5F7A7B] font-bold uppercase tracking-[0.2em] mt-3">{selectedPack?.title}</p>
                   </div>
                   
-                  {/* Spotify-style Controls */}
-                  <div className="flex items-center gap-10">
-                    <button className="text-gray-300 hover:text-gray-600 transition-colors"><svg width="24" height="24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6L18 18V6z"/></svg></button>
-                    <button className="w-16 h-16 bg-[#5F7A7B] text-white rounded-full flex items-center justify-center shadow-lg hover:scale-105 transition-all">
-                      <svg width="32" height="32" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                    </button>
-                    <button className="text-gray-300 hover:text-gray-600 transition-colors"><svg width="24" height="24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg></button>
-                  </div>
+                  <div className="flex flex-col items-center w-full max-w-sm gap-8">
+                    <div className="flex items-center gap-10">
+                      <button 
+                        onClick={handleBackward}
+                        className="text-gray-300 hover:text-gray-600 transition-colors">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                          <path d="M3 3v5h5" />
+                          <text x="12" y="15.5" fontSize="7" textAnchor="middle" fill="currentColor" stroke="none" fontWeight="bold">10</text>
+                        </svg>
+                      </button>
+                      
+                      <button 
+                        onClick={() => {
+                          if (isCurrentTrackActive && onTogglePlay) {
+                            onTogglePlay();
+                          } else {
+                            onPlay(selectedTopic!, selectedPack!.title);
+                          }
+                        }}
+                        className="w-20 h-20 bg-[#5F7A7B] text-white rounded-full flex items-center justify-center shadow-xl hover:scale-105 active:scale-95 transition-all"
+                      >
+                        {audioState?.isPlaying && isCurrentTrackActive ? (
+                          <svg width="32" height="32" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                        ) : (
+                          <svg width="36" height="36" fill="currentColor" viewBox="0 0 24 24" className="ml-1"><path d="M8 5v14l11-7z"/></svg>
+                        )}
+                      </button>
+                      
+                      <button 
+                        onClick={handleForward}
+                        className="text-gray-300 hover:text-gray-600 transition-colors">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M21 12a9 9 0 1 1-9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+                          <path d="M21 3v5h-5" />
+                          <text x="12" y="15.5" fontSize="7" textAnchor="middle" fill="currentColor" stroke="none" fontWeight="bold">10</text>
+                        </svg>
+                      </button>
+                    </div>
 
-                  <div className="w-full max-w-xs bg-gray-100 h-1 rounded-full overflow-hidden">
-                    <motion.div initial={{ width: 0 }} animate={{ width: "40%" }} className="bg-[#5F7A7B] h-full" />
-                  </div>
-                  <div className="flex justify-between w-full max-w-xs text-[10px] text-gray-400 font-bold uppercase tracking-widest">
-                    <span>02:45</span>
-                    <span>10:00</span>
+                    <div className="w-full space-y-2">
+                      <input 
+                        type="range"
+                        min="0"
+                        max={audioState?.duration || 0}
+                        value={audioState?.currentTime || 0}
+                        onChange={(e) => handleSeek(Number(e.target.value))}
+                        className="w-full h-1.5 bg-gray-100 rounded-full appearance-none cursor-pointer accent-[#5F7A7B]"
+                      />
+                      <div className="flex justify-between text-[10px] text-gray-400 font-bold uppercase tracking-widest">
+                        <span>{isCurrentTrackActive ? formatTime(audioState?.currentTime || 0) : "00:00"}</span>
+                        <span>{isCurrentTrackActive ? formatTime(audioState?.duration || 0) : "--:--"}</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
