@@ -1,7 +1,7 @@
 "use client";
 import { useState } from 'react';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation'; // Changed from Link
+import { useRouter } from 'next/navigation';
 import { createBrowserClient } from '@supabase/ssr';
 import congnifyLogo from '../../../public/cognify_logo.png';
 import { screeningData } from '../../components/screeningData';
@@ -11,13 +11,14 @@ export default function ScreeningPage() {
   const [step, setStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [answers, setAnswers] = useState<Record<string, string>>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
+  // Filters screeningData to only include MH (PHQ9), ASD (SRS), and ELD (MoCA) if needed
+  // This assumes screeningData is already organized by these three categories
   const currentData = screeningData[step];
   const progress = ((step + 1) / screeningData.length) * 100;
 
@@ -52,46 +53,45 @@ export default function ScreeningPage() {
   const handleComplete = async () => {
     if (submitting) return;
     setSubmitting(true);
+    
     try {
+      // 1. Send answers to API
+      // The backend now calculates scores for: phq9_score, srs_score, and moca_score
       const res = await fetch('/api/questionnaire', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ answers }),
       });
-      const json = await res.json().catch(() => ({}));
+
       if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        console.error('Failed to save questionnaire_result:', err);
+        const err = await res.json();
+        throw new Error(err.error || 'Failed to save result_q');
       }
    
-      // Mark onboarding as completed on the client after screening finishes
+      // 2. Mark onboarding as completed
       const { data: auth } = await supabase.auth.getUser();
-      const user = auth?.user;
-      if (!user) {
+      if (!auth?.user) {
         router.replace('/auth/login');
         return;
       }
 
       const { error: profileErr } = await supabase
         .from('user_profile')
-        .upsert(
-          { user_id: user.id, onboarding_completed: true, updated_at: new Date().toISOString() },
-          { onConflict: 'user_id' }
-        );
+        .upsert({ 
+          user_id: auth.user.id, 
+          onboarding_completed: true, 
+          updated_at: new Date().toISOString() 
+        }, { onConflict: 'user_id' });
 
-      if (profileErr) {
-        console.warn('Failed to set onboarding_completed:', profileErr.message);
-      }
+      if (profileErr) throw profileErr;
 
-    // Success → go to dashboard
-    router.push('/onboarding/dashboard');
-      console.log('API: ', res);
-      console.log('Answer:', answers);
-    } catch (e) {
-      console.error('Unexpected error saving questionnaire_result:', e);
+      // 3. Success redirect
+      router.push('/onboarding/dashboard');
+    } catch (e: any) {
+      console.error('Screening Error:', e.message);
+      alert(`Error: ${e.message}`); // Helpful for debugging database/auth issues
     } finally {
       setSubmitting(false);
-      router.push('/onboarding/dashboard');
     }
   };
 
@@ -101,7 +101,7 @@ export default function ScreeningPage() {
         <div className="flex justify-between items-end mb-4">
           <div className="flex items-center space-x-3">
             <Image src={congnifyLogo} alt="Cognify Logo" width={100} height={100} />
-            <span className="text-gray-400 font-light text-sm">Step {step + 1} of 3</span>
+            <span className="text-gray-400 font-light text-sm">Step {step + 1} of {screeningData.length}</span>
           </div>
           <span className="text-[#5F7A7B] text-xs font-semibold uppercase tracking-widest">
             {currentData.category}
@@ -119,11 +119,11 @@ export default function ScreeningPage() {
         <div className="flex justify-between items-end mb-8">
           <div>
             <h2 className="text-2xl font-light text-gray-800">{currentData.description}</h2>
-            <p className="text-sm text-gray-500 font-light mt-1">Select the best description. Double-click to deselect.</p>
+            <p className="text-sm text-gray-500 font-light mt-1">Select the most accurate response.</p>
           </div>
           <button 
             onClick={handleClearSection}
-            className="text-sm text-gray-400 hover:text-white transition-colors border border-gray-200 hover:bg-[#5F7A7B] rounded-full px-4 py-2"
+            className="text-sm text-gray-400 hover:text-[#5F7A7B] transition-colors"
           >
             Clear Section
           </button>
@@ -137,8 +137,7 @@ export default function ScreeningPage() {
                 <button
                   key={option}
                   onClick={() => handleAnswer(q.id, option)}
-                  onDoubleClick={() => handleUntick(q.id)}
-                  className={`px-3 py-3 text-xs rounded-xl border transition-all duration-200 select-none
+                  className={`px-3 py-3 text-xs rounded-xl border transition-all duration-200
                     ${answers[q.id] === option
                       ? 'bg-[#5F7A7B] text-white border-[#5F7A7B] shadow-sm'
                       : 'bg-[#F9F9F7] text-gray-500 border-transparent hover:border-gray-200'}`}
@@ -154,8 +153,8 @@ export default function ScreeningPage() {
           <button
             onClick={prevStep}
             disabled={step === 0}
-            className={`px-8 py-3 rounded-xl border border-gray-200 text-gray-500 font-light transition-all
-              ${step === 0 ? 'opacity-0 cursor-default' : 'hover:bg-white hover:shadow-sm cursor-pointer'}`}
+            className={`px-8 py-3 rounded-xl border border-gray-200 text-gray-500 font-light
+              ${step === 0 ? 'opacity-0' : 'hover:bg-white cursor-pointer'}`}
           >
             Back
           </button>
@@ -164,14 +163,14 @@ export default function ScreeningPage() {
             <button
               onClick={handleComplete}
               disabled={submitting}
-              className="px-10 py-3 bg-[#5F7A7B] text-white rounded-xl font-medium shadow-sm hover:bg-[#4D6364] transition-all cursor-pointer disabled:opacity-60"
+              className="px-10 py-3 bg-[#5F7A7B] text-white rounded-xl font-medium hover:bg-[#4D6364] disabled:opacity-60 transition-all"
             >
-              {submitting ? 'Saving…' : 'Complete Assessment'}
+              {submitting ? 'Calculating Scores...' : 'Finish Assessment'}
             </button>
           ) : (
             <button
               onClick={nextStep}
-              className="px-10 py-3 bg-[#5F7A7B] text-white rounded-xl font-medium shadow-sm hover:bg-[#4D6364] transition-all cursor-pointer"
+              className="px-10 py-3 bg-[#5F7A7B] text-white rounded-xl font-medium hover:bg-[#4D6364] transition-all"
             >
               Next Section
             </button>
