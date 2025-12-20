@@ -9,6 +9,7 @@ import congnifyLogo from '../../../public/cognify_logo.png';
 import { MindfulnessWindow } from '@/app/components/Mindfulness';
 import { FloatingPlayer } from '@/app/components/FloatingPlayer'; // Check your folder path
 import { Brain, BrainCircuitIcon } from "lucide-react";
+import { title } from 'process';
 
 type ChatMessage = { role: 'user' | 'model'; content: string };
 
@@ -195,7 +196,8 @@ function TaskWindow({ isOpen, onClose }: { isOpen: boolean; onClose: () => void 
       disorder: "Dementia / Cognitive Decline",
       description: "A continuous performance task used to measure working memory and memory capacity. Identify if the current stimulus matches the one from 'n' steps earlier.",
       image: "https://images.unsplash.com/photo-1559757175-5700dde675bc?auto=format&fit=crop&q=80&w=800",
-      time: "8 mins"
+      time: "8 mins",
+      link:"/nback"
     },
     {
       id: 2,
@@ -203,7 +205,17 @@ function TaskWindow({ isOpen, onClose }: { isOpen: boolean; onClose: () => void 
       disorder: "Attention Deficit / Executive Function",
       description: "Assess your ability to inhibit cognitive interference. Name the color of the word rather than reading the word itself.",
       image: "https://images.unsplash.com/photo-1509228468518-180dd4864904?auto=format&fit=crop&q=80&w=800",
-      time: "5 mins"
+      time: "5 mins",
+      link:"/stroop"
+    },
+    {
+      id:3,
+      title:"Flanker",
+         disorder: "Attention Deficit / Executive Function",
+      description: "Assess your ability to inhibit cognitive interference. Name the color of the word rather than reading the word itself.",
+      image: "https://images.unsplash.com/photo-1509228468518-180dd4864904?auto=format&fit=crop&q=80&w=800",
+      time: "5 mins",
+      link: "/flanker"
     }
   ];
 
