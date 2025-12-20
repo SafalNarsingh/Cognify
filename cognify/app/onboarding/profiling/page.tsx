@@ -16,34 +16,57 @@ export default function ProfilingPage() {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
+useEffect(() => {
+  const fetchCondition = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
 
-  useEffect(() => {
-    const fetchCondition = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+    // 1. Fetch scores from your results table
+    const { data, error: fetchError } = await supabase
+      .from('result_q')
+      .select('phq9_score, srs_score, moca_score')
+      .eq('user_id', user.id)
+      .single();
 
-      const { data, error } = await supabase
-        .from('result_q')
-        .select('phq9_score, srs_score, moca_score')
-        .eq('user_id', user.id)
-        .single();
-
-      if (data) {
-        // Logic to determine primary condition based on highest score
-        const scores = [
-          { label: "Depressive Tendencies", value: data.phq9_score },
-          { label: "Neurodivergent Patterns", value: data.srs_score },
-          { label: "Cognitive Decline Risk", value: data.moca_score },
-        ];
-        
-        const top = scores.sort((a, b) => b.value - a.value)[0];
-        setCondition(top.value > 10 ? top.label : "General Wellness Baseline");
-      }
+    if (fetchError) {
+      console.error("Error fetching results:", fetchError.message);
       setLoading(false);
-    };
+      return;
+    }
 
-    fetchCondition();
-  }, [supabase]);
+    if (data) {
+      const scores = [
+        { label: "Depressive Tendencies", value: data.phq9_score },
+        { label: "Neurodivergent Patterns", value: data.srs_score },
+        { label: "Cognitive Decline Risk", value: data.moca_score },
+      ];
+      
+      const top = scores.sort((a, b) => b.value - a.value)[0];
+      const finalCondition = top.value > 10 ? top.label : "General Wellness Baseline";
+      setCondition(finalCondition);
+
+      // 2. Attempt to save to user_profiles
+      // Ensure the table 'user_profiles' exists and column names match
+      const { error: saveError } = await supabase
+        .from('user_profiles')
+        .upsert({ 
+          id: user.id, 
+          condition: finalCondition,
+          updated_at: new Date().toISOString() 
+        });
+
+      if (saveError) {
+        console.error("Supabase Save Error:", saveError.message);
+        console.error("Error Details:", saveError.details);
+      } else {
+        console.log("Condition saved successfully:", finalCondition);
+      }
+    }
+    setLoading(false);
+  };
+
+  fetchCondition();
+}, [supabase]);
 
   return (
     <div className="min-h-screen bg-[#F9F9F7] flex flex-col items-center justify-center px-6 relative overflow-hidden">

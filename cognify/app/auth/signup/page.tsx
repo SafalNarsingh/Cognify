@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-// import congnifyLogo from '../../../public/cognify_logo.png';
+// import congnifyLogo from '../../../public/cognify_logo.png'; 
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Brain, BrainCircuitIcon } from "lucide-react";

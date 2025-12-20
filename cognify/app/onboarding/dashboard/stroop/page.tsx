@@ -279,6 +279,7 @@ export default function EmotionalStroopPage() {
           </motion.div>
         )}
       </AnimatePresence>
+      
     </div>
   );
 }
