@@ -7,6 +7,9 @@ import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import congnifyLogo from '../../../public/cognify_logo.png';
 import { MindfulnessWindow } from '@/app/components/Mindfulness';
+import { FloatingPlayer } from '@/app/components/FloatingPlayer'; // Check your folder path
+import { Brain, BrainCircuitIcon } from "lucide-react";
+import { title } from 'process';
 
 type ChatMessage = { role: 'user' | 'model'; content: string };
 
@@ -53,6 +56,7 @@ function ChatAssistant() {
   const [history, setHistory] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  // const [activeTrack, setActiveTrack] = useState<{track: string, pack: string} | null>(null); 
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
     // NEW: supabase + initial-start flag
@@ -265,7 +269,8 @@ function TaskWindow({ isOpen, onClose }: { isOpen: boolean; onClose: () => void 
       disorder: "Dementia / Cognitive Decline",
       description: "A continuous performance task used to measure working memory and memory capacity. Identify if the current stimulus matches the one from 'n' steps earlier.",
       image: "https://images.unsplash.com/photo-1559757175-5700dde675bc?auto=format&fit=crop&q=80&w=800",
-      time: "8 mins"
+      time: "8 mins",
+      link:"/nback"
     },
     {
       id: 2,
@@ -273,7 +278,17 @@ function TaskWindow({ isOpen, onClose }: { isOpen: boolean; onClose: () => void 
       disorder: "Attention Deficit / Executive Function",
       description: "Assess your ability to inhibit cognitive interference. Name the color of the word rather than reading the word itself.",
       image: "https://images.unsplash.com/photo-1509228468518-180dd4864904?auto=format&fit=crop&q=80&w=800",
-      time: "5 mins"
+      time: "5 mins",
+      link:"/stroop"
+    },
+    {
+      id:3,
+      title:"Flanker",
+         disorder: "Attention Deficit / Executive Function",
+      description: "Assess your ability to inhibit cognitive interference. Name the color of the word rather than reading the word itself.",
+      image: "https://images.unsplash.com/photo-1509228468518-180dd4864904?auto=format&fit=crop&q=80&w=800",
+      time: "5 mins",
+      link: "/flanker"
     }
   ];
 
@@ -528,6 +543,15 @@ export default function Dashboard() {
   const [isJournalOpen, setIsJournalOpen] = useState(false);
   const [isTaskOpen, setIsTaskOpen] = useState(false); // New state
   const [streak, setStreak] = useState<number>(0);
+  const [activeTrack, setActiveTrack] = useState<{track: string, pack: string} | null>(null);
+  const audioRef = useRef<HTMLAudioElement>(null!);
+  const [audioState, setAudioState] = useState({
+  isPlaying: false,
+  currentTime: 0,
+  duration: 0,
+  activeTrack: null as string | null,
+  activePack: null as string | null
+});
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -581,6 +605,33 @@ export default function Dashboard() {
 
   const [isMindfulnessOpen, setIsMindfulnessOpen] = useState(false);
 
+  const handleNewTrack = (track: string, pack: string) => {
+    setActiveTrack({ track, pack });
+    setAudioState(prev => ({
+      ...prev,
+      activeTrack: track,
+      activePack: pack,
+      isPlaying: true
+    }));
+  };
+
+  const updateAudioState = (state: Partial<typeof audioState>) => {
+    setAudioState(prev => ({ ...prev, ...state }));
+  };
+
+  const togglePlayback = () => {
+    setAudioState(prev => ({ ...prev, isPlaying: !prev.isPlaying }));
+  };
+
+  const handleClosePlayer = () => {
+    setActiveTrack(null);
+    setAudioState(prev => ({
+      ...prev,
+      activeTrack: null,
+      activePack: null,
+      isPlaying: false
+    }));
+  };
 
   useEffect(() => {
     const getData = async () => {
@@ -637,7 +688,7 @@ export default function Dashboard() {
       <nav className="fixed left-0 right-0 z-50 flex justify-center px-6 bottom-5 md:bottom-auto md:top-6">
         <div className="bg-white/80 backdrop-blur-xl border border-white/60 shadow-lg rounded-full px-6 py-2 flex items-center justify-between w-full max-w-2xl gap-3">
           <div className="hidden sm:block">
-            <Image src={congnifyLogo} alt="Logo" width={55} height={55} className="opacity-80" />
+            <div className="text-xl flex flex-row gap-1 text-[#5F7A7B] font-bold"><BrainCircuitIcon /> Cognify</div>
           </div>
           <div className="flex flex-1 justify-around md:justify-center items-center gap-1 md:gap-8">
             <NavItem label="Overview" active icon={<path d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18v-2.25Z" />} />
@@ -721,12 +772,29 @@ export default function Dashboard() {
              </svg>
           </button>
         </section>  
-      </main>
+        </main>
 
-      <ChatAssistant />
-      <TaskWindow isOpen={isTaskOpen} onClose={() => setIsTaskOpen(false)} />
-      <JournalWindow isOpen={isJournalOpen} onClose={() => setIsJournalOpen(false)} userId={user?.id} />
-      <MindfulnessWindow isOpen={isMindfulnessOpen} onClose={() => setIsMindfulnessOpen(false)} />
+        <ChatAssistant />
+        <TaskWindow isOpen={isTaskOpen} onClose={() => setIsTaskOpen(false)} />
+        <JournalWindow isOpen={isJournalOpen} onClose={() => setIsJournalOpen(false)} userId={user?.id} />
+       <MindfulnessWindow 
+          isOpen={isMindfulnessOpen} 
+          onClose={() => setIsMindfulnessOpen(false)} 
+          onPlay={handleNewTrack}
+          audioState={audioState}
+          onTogglePlay={togglePlayback}
+          audioRef={audioRef}
+        />
+        <FloatingPlayer 
+          ref={audioRef}
+          track={activeTrack?.track || null} 
+          pack={activeTrack?.pack || null}
+          isPlaying={audioState.isPlaying}
+          onPlayingChange={(playing) => updateAudioState({ isPlaying: playing })}
+          onTimeUpdate={(time) => updateAudioState({ currentTime: time })}
+          onDurationChange={(duration) => updateAudioState({ duration })}
+          onClose={handleClosePlayer}
+        />
 
       <style jsx>{`
         @keyframes float {
