@@ -2,9 +2,10 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import congnifyLogo from '../../../public/cognify_logo.png';
+// import congnifyLogo from '../../../public/cognify_logo.png';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import { Brain, BrainCircuitIcon } from "lucide-react";
 
 export default function SignupPage() {
   const [email, setEmail] = useState('');
@@ -58,12 +59,11 @@ export default function SignupPage() {
   return (
     <div className="min-h-screen bg-[#F9F9F7] flex flex-col items-center justify-center px-6 relative overflow-hidden">
        <Link href="/" className="flex items-center space-x-2 pb-8">
-            <Image
-              src={congnifyLogo}
-              alt="Cognify Logo"
-              width={200}
-              height={200}
-            />
+            <div className="p-8 flex justify-center relative z-10">
+        <Link href="/" className="flex items-center space-x-2">
+          <div className="text-xl flex flex-row gap-1 pt-20"><BrainCircuitIcon></BrainCircuitIcon> Cognify</div>
+        </Link>
+      </div>
           </Link>
       {/* Animated Background Elements */}
       <div className="absolute inset-0 pointer-events-none">

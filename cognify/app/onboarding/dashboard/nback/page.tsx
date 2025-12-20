@@ -1,14 +1,11 @@
-'use client';
+"use client";
 
-import router from 'next/router';
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useRouter } from 'next/navigation';
 import { createBrowserClient } from '@supabase/ssr';
 
-
-// ============================================================================
-// TYPES
-// ============================================================================
-
+// --- TYPES ---
 interface Trial {
   letter: string;
   index: number;
@@ -22,24 +19,15 @@ interface Trial {
 
 type GameState = 'intro' | 'playing' | 'results';
 
-// ============================================================================
-// GAME CONFIGURATION
-// ============================================================================
-
+// --- CONFIGURATION ---
 const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 const LETTER_DISPLAY_MS = 1500;
 const BLANK_GAP_MS = 500;
-const TOTAL_TRIALS = 30; // Increased to accommodate 5 remember letters
+const TOTAL_TRIALS = 30;
 const REMEMBER_DISPLAY_MS = 1200;
-const REMEMBER_COUNT = 5; // Number of "REMEMBER" letters per session
+const REMEMBER_COUNT = 5;
 
-// ============================================================================
-// GAME LOGIC UTILITIES
-// ============================================================================
-
-/**
- * Generate a random letter that's different from the previous one
- */
+// --- UTILITIES ---
 function getRandomLetter(exclude?: string): string {
   let letter: string;
   do {
@@ -48,98 +36,60 @@ function getRandomLetter(exclude?: string): string {
   return letter;
 }
 
-/**
- * Generate sequence with embedded targets
- * Returns: { sequence, rememberIndices }
- */
 function generateGameSequence(totalTrials: number, nValue: number, rememberCount: number) {
   const sequence: string[] = [];
   const rememberIndices: number[] = [];
-  
-  // Determine positions for REMEMBER letters
-  // They should be spaced out and have room for the target to appear N steps later
-  const minGap = nValue + 2; // Minimum gap between remember letters
-  let currentPos = Math.floor(Math.random() * 3); // Start within first few positions
+  const minGap = nValue + 2;
+  let currentPos = Math.floor(Math.random() * 3);
   
   for (let i = 0; i < rememberCount; i++) {
     if (currentPos + nValue < totalTrials) {
       rememberIndices.push(currentPos);
-      currentPos += minGap + Math.floor(Math.random() * 3); // Add some randomness
+      currentPos += minGap + Math.floor(Math.random() * 3);
     }
   }
   
-  // Build the sequence
   for (let i = 0; i < totalTrials; i++) {
     const prevLetter = i > 0 ? sequence[i - 1] : undefined;
-    
-    // Check if this position should match a remember letter (is a target)
     const rememberIndex = rememberIndices.findIndex(idx => i === idx + nValue);
     
     if (rememberIndex !== -1) {
-      // This is a target position - use the remember letter
-      const rememberLetter = sequence[rememberIndices[rememberIndex]];
-      sequence.push(rememberLetter);
-    } else {
-      // Generate a random letter
-      // Make sure it doesn't accidentally match a previous remember letter at N positions back
-      let letter: string;
-      let attempts = 0;
-      do {
-        letter = getRandomLetter(prevLetter);
-        attempts++;
-      } while (
-        attempts < 10 &&
-        rememberIndices.some(idx => i === idx + nValue && letter === sequence[idx])
-      );
-      sequence.push(letter);
-    }
+      sequence.push(sequence[rememberIndices[rememberIndex]]);
+    } // Inside generateGameSequence function...
+    // 
+    else {
+  // Explicitly type 'letter' as string here
+  let letter: string; 
+  let attempts = 0;
+  do {
+    letter = getRandomLetter(prevLetter);
+    attempts++;
+  } while (
+    attempts < 10 &&
+    rememberIndices.some(idx => i === idx + nValue && letter === sequence[idx])
+  );
+  sequence.push(letter);
+}
   }
-  
   return { sequence, rememberIndices };
 }
 
-/**
- * Calculate session metrics from trials
- */
 function calculateMetrics(trials: Trial[]) {
   const targets = trials.filter((t) => t.isTarget);
   const nonTargets = trials.filter((t) => !t.isTarget);
-
   const hits = targets.filter((t) => t.userResponded && t.isCorrect).length;
   const misses = targets.filter((t) => !t.userResponded).length;
   const falsePositives = nonTargets.filter((t) => t.userResponded).length;
   const correctRejections = nonTargets.filter((t) => !t.userResponded).length;
+  const accuracy = trials.length > 0 ? ((hits + correctRejections) / trials.length) * 100 : 0;
+  const hitRTs = targets.filter((t) => t.userResponded && t.isCorrect && t.reactionTime !== null).map((t) => t.reactionTime as number);
+  const avgRT = hitRTs.length > 0 ? hitRTs.reduce((a, b) => a + b, 0) / hitRTs.length : 0;
 
-  const totalCorrect = hits + correctRejections;
-  const accuracy = trials.length > 0 ? (totalCorrect / trials.length) * 100 : 0;
-
-  const hitReactionTimes = targets
-    .filter((t) => t.userResponded && t.isCorrect && t.reactionTime !== null)
-    .map((t) => t.reactionTime as number);
-
-  const avgReactionTime =
-    hitReactionTimes.length > 0
-      ? hitReactionTimes.reduce((a, b) => a + b, 0) / hitReactionTimes.length
-      : 0;
-
-  return {
-    accuracy: Math.round(accuracy),
-    hits,
-    misses,
-    falsePositives,
-    correctRejections,
-    avgReactionTime: Math.round(avgReactionTime),
-    totalTrials: trials.length,
-    totalTargets: targets.length,
-  };
+  return { accuracy: Math.round(accuracy), hits, misses, falsePositives, avgReactionTime: Math.round(avgRT), totalTargets: targets.length };
 }
 
-// ============================================================================
-// MAIN COMPONENT
-// ============================================================================
-
+// --- MAIN COMPONENT ---
 export default function NBackGame() {
-  // Game state
   const [user, setUser] = useState<any>(null);
   const [gameState, setGameState] = useState<GameState>('intro');
   const [nValue, setNValue] = useState<number>(2);
@@ -149,358 +99,189 @@ export default function NBackGame() {
   const [showLetter, setShowLetter] = useState<boolean>(false);
   const [showRemember, setShowRemember] = useState<boolean>(false);
   const [trials, setTrials] = useState<Trial[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
+  const hasSaved = useRef(false);
 
-  // Refs for tracking
   const trialStartTime = useRef<number>(0);
   const hasResponded = useRef<boolean>(false);
+  const router = useRouter();
+  const supabase = createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
 
-  // ============================================================================
-  // GAME CONTROL
-  // ============================================================================
-
-    const supabase = createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
-
+  const handleBackToDashboard = () => router.push('/onboarding/dashboard?open=tasks');
 
   const startGame = useCallback(() => {
-    const randomN = [ 2, 3][Math.floor(Math.random() * 2)];
-    const { sequence: newSequence, rememberIndices: newRememberIndices } = 
-      generateGameSequence(TOTAL_TRIALS, randomN, REMEMBER_COUNT);
-
+    const randomN = [2, 3][Math.floor(Math.random() * 2)];
+    const { sequence: newSeq, rememberIndices: newRem } = generateGameSequence(TOTAL_TRIALS, randomN, REMEMBER_COUNT);
     setNValue(randomN);
-    setSequence(newSequence);
-    setRememberIndices(newRememberIndices);
+    setSequence(newSeq);
+    setRememberIndices(newRem);
     setTrials([]);
     setCurrentIndex(-1);
     setGameState('playing');
+    hasSaved.current = false;
   }, []);
 
-const sendDataToServer = async (metrics: any) => {
-  try {
-   const serverData={
-        metrics,user
+  const sendDataToServer = async (metrics: any) => {
+    setIsSaving(true);
+    try {
+      const res = await fetch('/api/game/nback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ metrics, user }),
+      });
+      if (!res.ok) throw new Error('Failed to send data');
+    } catch (error) {
+      console.error('Error:', error);
+    } finally {
+      setIsSaving(false);
     }
-    const res = await fetch('/api/game/nback', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(serverData),
-    })
+  };
 
-    if (!res.ok) {
-      throw new Error('Failed to send N-back data')
-    }
+  const recordTrial = useCallback((responded: boolean, reactionTime: number | null) => {
+    if (currentIndex < 0) return;
+    const letter = sequence[currentIndex];
+    const rememberIndex = rememberIndices.find(idx => currentIndex === idx + nValue);
+    const isTarget = rememberIndex !== undefined && sequence[rememberIndex] === letter;
+    const isCorrect = responded === isTarget;
 
-    const data = await res.json()
-    return data
-  } catch (error) {
-    console.error('Error sending N-back metrics:', error)
-  }
-}
+    setTrials((prev) => [...prev, { letter, index: currentIndex, nValue, isTarget, userResponded: responded, isCorrect, reactionTime, timestamp: Date.now() }]);
+  }, [currentIndex, sequence, rememberIndices, nValue]);
 
-
-  const endGame = useCallback(() => {
-    setGameState('results');
-  }, []);
-
-  // ============================================================================
-  // TRIAL MANAGEMENT
-  // ============================================================================
-
-  const recordTrial = useCallback(
-    (responded: boolean, reactionTime: number | null) => {
-      const letter = sequence[currentIndex];
-      
-      // Check if this is a target: is there a remember letter N positions back?
-      const rememberIndex = rememberIndices.find(idx => currentIndex === idx + nValue);
-      const isTarget = rememberIndex !== undefined && sequence[rememberIndex] === letter;
-      
-      const isCorrect = responded === isTarget;
-
-      const trial: Trial = {
-        letter,
-        index: currentIndex,
-        nValue,
-        isTarget,
-        userResponded: responded,
-        isCorrect,
-        reactionTime,
-        timestamp: Date.now(),
-      };
-
-      setTrials((prev) => [...prev, trial]);
-    },
-    [currentIndex, sequence, rememberIndices, nValue]
-  );
-
-  // ============================================================================
-  // KEYBOARD HANDLER
-  // ============================================================================
-
-  useEffect(()=>{
-         const getData = async () => {
+  useEffect(() => {
+    const getData = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        router.push('/auth/login');
-        return;
-      }
-      setUser(user);
-      console.log(user)
+      if (!user) router.push('/auth/login');
+      else setUser(user);
     };
     getData();
-  },[supabase])
+  }, [supabase, router]);
 
   useEffect(() => {
     if (gameState !== 'playing' || !showLetter || hasResponded.current) return;
-
     const handleKeyPress = (e: KeyboardEvent) => {
       if (e.code === 'Space') {
         e.preventDefault();
         hasResponded.current = true;
-        const reactionTime = Date.now() - trialStartTime.current;
-        recordTrial(true, reactionTime);
+        recordTrial(true, Date.now() - trialStartTime.current);
       }
     };
-
-
-
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
   }, [gameState, showLetter, recordTrial]);
 
-  // ============================================================================
-  // TRIAL PROGRESSION
-  // ============================================================================
-
   useEffect(() => {
-
-    
     if (gameState !== 'playing') return;
+    if (currentIndex === -1) { setCurrentIndex(0); return; }
+    if (currentIndex >= sequence.length) { setGameState('results'); return; }
 
- 
-    // Start first trial
-    if (currentIndex === -1) {
-      setCurrentIndex(0);
-      return;
-    }
-
-    // End game if all trials complete
-    if (currentIndex >= sequence.length) {
-      endGame();
-      return;
-    }
-
-    // Reset response tracking
     hasResponded.current = false;
     trialStartTime.current = Date.now();
 
-    // Check if current position should show "REMEMBER"
-    const shouldShowRemember = rememberIndices.includes(currentIndex);
-    
-    if (shouldShowRemember) {
+    if (rememberIndices.includes(currentIndex)) {
       setShowRemember(true);
       setTimeout(() => setShowRemember(false), REMEMBER_DISPLAY_MS);
     }
 
-    // Show letter
     setShowLetter(true);
-
-    const letterTimer = setTimeout(() => {
+    const timer = setTimeout(() => {
       setShowLetter(false);
-
-      // Record if no response during letter display
-      if (!hasResponded.current) {
-        recordTrial(false, null);
-      }
-
-      // Blank gap, then next trial
-      const gapTimer = setTimeout(() => {
-        setCurrentIndex((prev) => prev + 1);
-      }, BLANK_GAP_MS);
-
-      return () => clearTimeout(gapTimer);
+      if (!hasResponded.current) recordTrial(false, null);
+      setTimeout(() => setCurrentIndex(prev => prev + 1), BLANK_GAP_MS);
     }, LETTER_DISPLAY_MS);
 
-    return () => clearTimeout(letterTimer);
-  }, [gameState, currentIndex, sequence, nValue, recordTrial, endGame, rememberIndices]);
+    return () => clearTimeout(timer);
+  }, [gameState, currentIndex, sequence, recordTrial, rememberIndices]);
 
-  // ============================================================================
-  // RENDER: INTRO
-  // ============================================================================
+  useEffect(() => {
+    if (gameState === 'results' && !hasSaved.current && trials.length > 0) {
+      hasSaved.current = true;
+      const m = calculateMetrics(trials);
+      sendDataToServer(m);
+    }
+  }, [gameState, trials]);
 
-  if (gameState === 'intro') {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-[#f9f9f7] via-[#fefefe] to-[#f5f5f3] flex flex-col items-center justify-center p-8">
-        <div className="text-center max-w-2xl mb-16">
-          <h1 className="text-4xl font-light text-[#2a2a2a] mb-6 tracking-tight">
-            N-Back Game 
-          </h1>
-          <p className="text-base font-light text-[#6a6a6a] leading-relaxed mb-6">
-            A cognitive memory task designed to assess working memory and attention. Commonly used
-            in dementia and cognitive decline screening.
-          </p>
-          <div className="bg-[#5f7a7b]/5 p-6 rounded-lg mb-6">
-            <p className="text-sm font-normal text-[#4d6364] leading-relaxed mb-3">
-              <strong className="font-medium">How to play:</strong>
-            </p>
-            <ol className="text-sm font-light text-[#6a6a6a] leading-relaxed text-left space-y-2">
-              <li>1. You'll see a sequence of letters, one at a time</li>
-              <li>2. When you see "REMEMBER" above a letter, memorize it</li>
-              <li>3. After N steps, that letter will appear again</li>
-              <li>4. Press <strong className="font-medium text-[#4d6364]">SPACEBAR</strong> when you see the remembered letter reappear</li>
-              <li>5. There will be 5 "REMEMBER" letters in each session</li>
-            </ol>
-          </div>
+  return (
+    <div className="max-w-4xl mx-auto p-6 min-h-screen flex flex-col justify-center">
+      <AnimatePresence mode="wait">
+        {gameState === 'intro' && (
+          <motion.div key="intro" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="text-center space-y-8 bg-white p-12 rounded-[3rem] shadow-sm border border-gray-50">
+            <div>
+              <h2 className="text-3xl font-light text-gray-800">N-Back Game</h2>
+              <p className="text-[10px] text-[#5F7A7B] font-bold uppercase tracking-[0.2em]">Working Memory Assessment</p>
+            </div>
+            <div className="max-w-md mx-auto space-y-4 text-left border-y border-gray-50 py-6">
+              <p className="text-sm text-gray-500 font-light leading-relaxed">1. Memorize letters when <b>REMEMBER</b> appears.</p>
+              <p className="text-sm text-gray-500 font-light leading-relaxed">2. Press <b>SPACEBAR</b> when that letter reappears {nValue} steps later.</p>
+            </div>
+            <div className="pt-4 flex flex-col items-center gap-4">
+              <button onClick={startGame} className="px-12 py-4 bg-[#5F7A7B] text-white rounded-full text-sm font-bold hover:shadow-xl transition-all">Start Test</button>
+              <button onClick={handleBackToDashboard} className="text-[10px] text-gray-400 uppercase tracking-widest hover:text-[#5F7A7B]">Return to Dashboard</button>
+            </div>
+          </motion.div>
+        )}
+
+        {gameState === 'playing' && (
+          <motion.div key="playing" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-12 text-center">
+            <div className="flex justify-between items-center mb-12">
+              <button onClick={handleBackToDashboard} className="text-[#5F7A7B] text-xs font-bold uppercase flex items-center gap-2 hover:opacity-70 transition-all">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                Back to Dashboard
+              </button>
+              <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Trial {currentIndex + 1} / {TOTAL_TRIALS}</div>
+            </div>
+            <div className="relative h-64 flex items-center justify-center">
+              {showRemember && <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="absolute -top-10 text-[10px] font-bold text-[#5F7A7B] tracking-widest uppercase">Remember</motion.div>}
+              <AnimatePresence>
+                {showLetter && (
+                  <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="text-8xl font-light text-[#2a2a2a] bg-white w-48 h-48 flex items-center justify-center rounded-[2rem] shadow-sm border border-gray-50">
+                    {sequence[currentIndex]}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+            <p className="text-[10px] text-gray-300 font-bold uppercase tracking-widest">Level: {nValue}-Back | Press Space for Match</p>
+          </motion.div>
+        )}
+
+        {gameState === 'results' && (
+          <motion.div key="results" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center space-y-8">
+            {(() => {
+              const m = calculateMetrics(trials);
+              return (
+                <>
+                  <h3 className="text-7xl font-light text-[#5F7A7B]">{m.accuracy}%</h3>
+                  <div className="grid grid-cols-2 gap-4 max-w-md mx-auto">
+                    <ResultCard label="Hits" value={m.hits} />
+                    <ResultCard label="Misses" value={m.misses} />
+                    <ResultCard label="False Positives" value={m.falsePositives} />
+                    <ResultCard label="Avg Response" value={`${m.avgReactionTime}ms`} />
+                  </div>
+                </>
+              );
+            })()}
+            <div className="flex flex-col items-center gap-4">
+              <button onClick={startGame} className="px-10 py-3 bg-[#5F7A7B] text-white rounded-full text-xs font-bold hover:shadow-lg transition-all">Try Again</button>
+              <button onClick={handleBackToDashboard} className="text-xs text-gray-400 hover:text-gray-600">Finish and Close</button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      <div className="text-right">
+
+          <h2 className="text-xl font-light text-gray-800">NBack Task</h2>
+
+          <p className="text-[10px] text-gray-400 uppercase tracking-tighter">Working Memory Assessment</p>
+
         </div>
+    </div>
+  );
+}
 
-        <button
-          onClick={startGame}
-          className="bg-[#5f7a7b] text-white px-12 py-4 text-base font-normal tracking-wide hover:bg-[#4d6364] transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0"
-        >
-          Start Test
-        </button>
-      </div>
-    );
-  }
-
-  // ============================================================================
-  // RENDER: PLAYING
-  // ============================================================================
-
-  if (gameState === 'playing') {
-    const currentLetter = sequence[currentIndex];
-    const rememberedCount = rememberIndices.filter(idx => idx < currentIndex).length;
-
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-[#f9f9f7] via-[#fefefe] to-[#f5f5f3] flex flex-col">
-        <div className="border-b border-[#5f7a7b]/10 py-10 px-8">
-          <div className="text-center mb-6">
-            <h1 className="text-2xl font-light text-[#2a2a2a] mb-2 tracking-tight">
-              N-Back Game
-            </h1>
-            <p className="text-sm font-light text-[#6a6a6a] leading-relaxed">
-              Press <strong className="font-medium text-[#5f7a7b]">Spacebar</strong> when a remembered letter reappears
-            </p>
-          </div>
-          <div className="flex justify-center items-center gap-12 text-xs font-normal text-[#6a6a6a] tracking-wide">
-            <div className="text-[#5f7a7b]">Level: {nValue}-Back</div>
-            <div>{currentIndex + 1} / {TOTAL_TRIALS}</div>
-            <div>Remembered: {rememberedCount} / {REMEMBER_COUNT}</div>
-          </div>
-        </div>
-
-        <div className="flex-1 flex items-center justify-center relative">
-          {showLetter && (
-            <div className="text-[12rem] font-light text-[#2a2a2a] tracking-tighter select-none">
-              {currentLetter}
-            </div>
-          )}
-          {showRemember && (
-            <div className="absolute top-[calc(50%-10rem)] text-xs font-normal text-[#5f7a7b] tracking-[0.15em] uppercase animate-fade-in-out">
-              REMEMBER
-            </div>
-          )}
-        </div>
-
-        <style jsx>{`
-          @keyframes fade-in-out {
-            0% { opacity: 0; transform: translateY(5px); }
-            20% { opacity: 1; transform: translateY(0); }
-            80% { opacity: 1; transform: translateY(0); }
-            100% { opacity: 0; transform: translateY(-5px); }
-          }
-          .animate-fade-in-out {
-            animation: fade-in-out 1.2s ease-in-out;
-          }
-        `}</style>
-      </div>
-    );
-  }
-
-  // ============================================================================
-  // RENDER: RESULTS
-  // ============================================================================
-
-  if (gameState === 'results') {
-    const metrics = calculateMetrics(trials);
-    console.log(metrics)
-    sendDataToServer(metrics)
-
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-[#f9f9f7] via-[#fefefe] to-[#f5f5f3] flex flex-col items-center justify-center p-8">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl font-light text-[#2a2a2a] mb-2 tracking-tight">
-            Session Complete
-          </h2>
-          <p className="text-sm font-light text-[#6a6a6a]">
-            {nValue}-Back Test Results
-          </p>
-        </div>
-
-        <div className="flex flex-col items-center gap-10 max-w-2xl">
-          <div className="text-center">
-            <div className="text-7xl font-light text-[#5f7a7b] tracking-tight mb-2">
-              {metrics.accuracy}%
-            </div>
-            <div className="text-xs font-normal text-[#6a6a6a] uppercase tracking-[0.1em]">
-              Accuracy
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-8 w-full">
-            <div className="text-center">
-              <div className="text-4xl font-light text-[#2a2a2a] tracking-tight mb-2">
-                {metrics.hits}
-              </div>
-              <div className="text-xs font-normal text-[#6a6a6a] uppercase tracking-[0.1em]">
-                Correct Hits
-              </div>
-            </div>
-
-            <div className="text-center">
-              <div className="text-4xl font-light text-[#2a2a2a] tracking-tight mb-2">
-                {metrics.misses}
-              </div>
-              <div className="text-xs font-normal text-[#6a6a6a] uppercase tracking-[0.1em]">
-                Misses
-              </div>
-            </div>
-
-            <div className="text-center">
-              <div className="text-4xl font-light text-[#2a2a2a] tracking-tight mb-2">
-                {metrics.falsePositives}
-              </div>
-              <div className="text-xs font-normal text-[#6a6a6a] uppercase tracking-[0.1em]">
-                False Positives
-              </div>
-            </div>
-
-            <div className="text-center">
-              <div className="text-4xl font-light text-[#2a2a2a] tracking-tight mb-2">
-                {metrics.avgReactionTime > 0 ? `${metrics.avgReactionTime}ms` : 'N/A'}
-              </div>
-              <div className="text-xs font-normal text-[#6a6a6a] uppercase tracking-[0.1em]">
-                Avg. Reaction Time
-              </div>
-            </div>
-          </div>
-
-          <div className="text-center mt-4">
-            <div className="text-sm font-light text-[#6a6a6a] mb-2">
-              Targets Found: {metrics.hits} / {metrics.totalTargets}
-            </div>
-          </div>
-
-          <button
-            onClick={startGame}
-            className="bg-[#5f7a7b] text-white px-10 py-3.5 text-base font-normal tracking-wide hover:bg-[#4d6364] transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 mt-4"
-          >
-            Restart Test
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  return null;
+function ResultCard({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className="bg-white p-6 rounded-3xl border border-gray-50">
+      <p className="text-[9px] text-gray-400 uppercase font-bold mb-1">{label}</p>
+      <p className="text-2xl text-gray-800">{value}</p>
+    </div>
+  );
 }

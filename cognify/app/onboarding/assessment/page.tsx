@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import congnifyLogo from '../../../public/cognify_logo.png';
+import { BrainCircuitIcon } from "lucide-react";
 
 export default function AssessmentPage() {
   const router = useRouter();
@@ -30,7 +31,7 @@ export default function AssessmentPage() {
         <div className="absolute bottom-32 left-32 w-16 h-16 border border-dashed border-gray-400 rounded-full animate-spin-slow" style={{ animationDelay: '3s' }}></div>
       </div>
       <div className="w-full max-w-lg bg-white p-10 rounded-3xl border border-gray-100 shadow-sm text-center space-y-8 relative z-10">
-        <Image src={congnifyLogo} alt="Cognify Logo" width={120} height={120} className="mx-auto opacity-80" />
+        <div className="text-xl flex flex-row gap-1"><BrainCircuitIcon></BrainCircuitIcon> Cognify</div>
 
         <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-700">
           <h2 className="text-2xl font-light text-gray-800 tracking-tight">Cognitive Assessment</h2>

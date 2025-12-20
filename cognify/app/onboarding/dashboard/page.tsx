@@ -272,7 +272,7 @@ function TaskWindow({ isOpen, onClose }: { isOpen: boolean; onClose: () => void 
       description: "A continuous performance task used to measure working memory and memory capacity. Identify if the current stimulus matches the one from 'n' steps earlier.",
       image: "https://images.unsplash.com/photo-1559757175-5700dde675bc?auto=format&fit=crop&q=80&w=800",
       time: "8 mins",
-      link:"/nback"
+      link:"/onboarding/dashboard/nback"
     },
     {
       id: 2,
@@ -281,7 +281,7 @@ function TaskWindow({ isOpen, onClose }: { isOpen: boolean; onClose: () => void 
       description: "Assess your ability to inhibit cognitive interference. Name the color of the word rather than reading the word itself.",
       image: "https://images.unsplash.com/photo-1509228468518-180dd4864904?auto=format&fit=crop&q=80&w=800",
       time: "5 mins",
-      link:"/stroop"
+      link:"/onboarding/dashboard/stroop"
     },
     {
       id:3,

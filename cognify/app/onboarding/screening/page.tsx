@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { createBrowserClient } from '@supabase/ssr';
 import congnifyLogo from '../../../public/cognify_logo.png';
 import { screeningData } from '../../components/screeningData';
+import { BrainCircuitIcon } from "lucide-react";
 
 export default function ScreeningPage() {
   const router = useRouter();
@@ -86,7 +87,7 @@ export default function ScreeningPage() {
       if (profileErr) throw profileErr;
 
       // 3. Success redirect
-      router.push('/onboarding/dashboard');
+      router.push('/onboarding/profiling');
     } catch (e: any) {
       console.error('Screening Error:', e.message);
       alert(`Error: ${e.message}`); // Helpful for debugging database/auth issues
@@ -100,7 +101,7 @@ export default function ScreeningPage() {
       <div className="w-full max-w-2xl mb-12">
         <div className="flex justify-between items-end mb-4">
           <div className="flex items-center space-x-3">
-            <Image src={congnifyLogo} alt="Cognify Logo" width={100} height={100} />
+            <div className="text-xl flex flex-row gap-1"><BrainCircuitIcon></BrainCircuitIcon> Cognify</div>
             <span className="text-gray-400 font-light text-sm">Step {step + 1} of {screeningData.length}</span>
           </div>
           <span className="text-[#5F7A7B] text-xs font-semibold uppercase tracking-widest">

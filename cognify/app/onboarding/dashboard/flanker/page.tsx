@@ -1,6 +1,6 @@
   "use client";
 
-  import { useState, useEffect, useCallback } from 'react';
+  import { useState, useEffect, useCallback, useRef } from 'react';
   import { motion, AnimatePresence } from 'framer-motion';
   import { useRouter } from 'next/navigation';
   import { createBrowserClient } from '@supabase/ssr';
@@ -22,6 +22,7 @@
     const [isFinished, setIsFinished] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [startTime, setStartTime] = useState<number>(0);
+    const hasSaved = useRef(false);
     const router = useRouter();
 
     const supabase = createBrowserClient(
@@ -86,10 +87,11 @@
 
     // Trigger save when finished
   useEffect(() => {
-    if (isFinished) {
+    if (isFinished && !hasSaved.current) {
+      hasSaved.current = true;
       saveResults(results);
     }
-  }, [isFinished]);
+  }, [isFinished, results]);
 
     // Effect for trial timeout
     useEffect(() => {

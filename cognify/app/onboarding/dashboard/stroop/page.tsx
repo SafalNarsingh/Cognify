@@ -1,9 +1,10 @@
-'use client';
+"use client";
 
-import { useEffect, useMemo, useRef, useState } from 'react';
-import Link from 'next/link';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useRouter } from 'next/navigation';
 
+// --- TYPES ---
 type BlockType = 'neutral' | 'emotional';
 type ColorKey = 'red' | 'green' | 'blue' | 'purple';
 
@@ -24,6 +25,7 @@ export type StroopTrialRecord = {
   rtMs: number | null;
 };
 
+// --- CONFIGURATION ---
 const COLORS: { key: ColorKey; label: string; textClass: string }[] = [
   { key: 'red',    label: 'R', textClass: 'text-red-600' },
   { key: 'green',  label: 'G', textClass: 'text-green-600' },
@@ -34,6 +36,7 @@ const COLORS: { key: ColorKey; label: string; textClass: string }[] = [
 const NEUTRAL_WORDS = ['Table', 'Path', 'Chair', 'Street', 'Window', 'Paper', 'Garden', 'Bottle'];
 const EMOTIONAL_WORDS = ['Death', 'Kill', 'Shame', 'Murder', 'Fear', 'Trauma', 'Pain', 'Grief'];
 
+// --- UTILITIES ---
 function shuffle<T>(arr: T[]): T[] {
   return [...arr].sort(() => Math.random() - 0.5);
 }
@@ -43,6 +46,7 @@ function randomColor(): ColorKey {
 }
 
 export default function EmotionalStroopPage() {
+  const router = useRouter();
   const [phase, setPhase] = useState<'intro' | 'test' | 'summary'>('intro');
   const [trialIndex, setTrialIndex] = useState(0);
   const [records, setRecords] = useState<StroopTrialRecord[]>([]);
@@ -50,28 +54,21 @@ export default function EmotionalStroopPage() {
   const [startTs, setStartTs] = useState<number | null>(null);
   const [awaitingResponse, setAwaitingResponse] = useState(false);
   const [iti, setIti] = useState(false);
-  const wordRef = useRef<HTMLDivElement | null>(null);
+  const [posted, setPosted] = useState(false);
 
-  // Interleave 4 Neutral and 4 Emotional trials randomly
+  const totalTrials = 8;
+
   const randomizedTrials = useMemo(() => {
     const n = shuffle(NEUTRAL_WORDS).slice(0, 4).map(w => ({ block: 'neutral' as BlockType, word: w, inkColor: randomColor() }));
     const e = shuffle(EMOTIONAL_WORDS).slice(0, 4).map(w => ({ block: 'emotional' as BlockType, word: w, inkColor: randomColor() }));
     return shuffle([...n, ...e]);
   }, []);
 
-  const totalTrials = 8;
+  const handleBackToDashboard = () => {
+    router.push('/onboarding/dashboard?open=tasks');
+  };
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (!awaitingResponse) return;
-      const k = e.key.toLowerCase();
-      const map: Record<string, ColorKey> = { r: 'red', g: 'green', b: 'blue', p: 'purple' };
-      if (map[k]) handleResponse(map[k]);
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [awaitingResponse, startTs, current]);
-
+  // --- TASK LOGIC ---
   const startTask = () => {
     setPhase('test');
     setTrialIndex(0);
@@ -91,7 +88,7 @@ export default function EmotionalStroopPage() {
     }, 600);
   };
 
-  const handleResponse = (selected: ColorKey) => {
+  const handleResponse = useCallback((selected: ColorKey) => {
     if (!awaitingResponse || !current) return;
     const rt = startTs ? performance.now() - startTs : 0;
     
@@ -115,9 +112,19 @@ export default function EmotionalStroopPage() {
     } else {
       setPhase('summary');
     }
-  };
+  }, [awaitingResponse, current, trialIndex, startTs]);
 
-  // Metrics Logic
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const k = e.key.toLowerCase();
+      const map: Record<string, ColorKey> = { r: 'red', g: 'green', b: 'blue', p: 'purple' };
+      if (map[k]) handleResponse(map[k]);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [handleResponse]);
+
+  // --- METRICS ---
   const getStats = (type: BlockType) => {
     const group = records.filter(r => r.block === type);
     const correctCount = group.filter(r => r.correct).length;
@@ -136,154 +143,152 @@ export default function EmotionalStroopPage() {
   const emotionalStats = getStats('emotional');
   const interference = emotionalStats.avgRT - neutralStats.avgRT;
 
-  // Auto-post summary to API when reaching summary (no UI changes)
-  const [posted, setPosted] = useState(false);
+  // --- API SYNC ---
   useEffect(() => {
-    const postSummary = async () => {
-      try {
-        const payload = {
-          summary: {
-            rtNeutralMs: neutralStats.avgRT,
-            rtEmotionalMs: emotionalStats.avgRT,
-            accuracyNeutralPct: neutralStats.accuracy,
-            accuracyEmotionalPct: emotionalStats.accuracy,
-            interferenceMs: interference,
-          },
-        };
-        const res = await fetch('/api/task/stroop', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
-        // Fail silently to avoid design changes
-        if (!res.ok) {
-          // Optionally log to console for debugging
-          const err = await res.text();
-          console.warn('Stroop save failed:', err);
-        }
-      } catch (e) {
-        console.warn('Stroop save error:', e);
-      } finally {
-        setPosted(true);
-      }
-    };
-
     if (phase === 'summary' && !posted) {
+      const postSummary = async () => {
+        try {
+          await fetch('/api/task/stroop', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              summary: {
+                rtNeutralMs: neutralStats.avgRT,
+                rtEmotionalMs: emotionalStats.avgRT,
+                accuracyNeutralPct: neutralStats.accuracy,
+                accuracyEmotionalPct: emotionalStats.accuracy,
+                interferenceMs: interference,
+              },
+            }),
+          });
+          setPosted(true);
+        } catch (e) {
+          console.warn('Stroop save error:', e);
+        }
+      };
       postSummary();
     }
-  }, [phase, posted, neutralStats.avgRT, emotionalStats.avgRT, neutralStats.accuracy, emotionalStats.accuracy, interference]);
+  }, [phase, posted, neutralStats, emotionalStats, interference]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#F9F9F7] via-[#FEFEFE] to-[#F5F5F3] flex flex-col">
-      <nav className="fixed top-6 left-6 z-50">
-        <Link href="/onboarding/dashboard" className="flex items-center gap-2 bg-white/80 backdrop-blur-xl border border-white/60 shadow-lg rounded-full px-4 py-2 text-gray-700 hover:text-[#5F7A7B] transition-colors">
-          <span className="text-xs font-medium">Back</span>
-        </Link>
-      </nav>
-
-      <main className="flex-1 p-6 md:p-12 mt-16 md:mt-24 max-w-5xl mx-auto w-full pb-24">
-        <header className="mb-8">
-          <div className="bg-white p-8 rounded-[2rem] border border-gray-100 shadow-sm">
-            <h1 className="text-2xl md:text-3xl font-light text-gray-900 mb-2">Emotional Stroop Task</h1>
-            <p className="text-gray-500 italic mb-4">“Focus is the anchor of clarity.”</p>
-            <ul className="text-sm text-gray-600 space-y-1">
-              <li>• Focus on the ink color, ignoring the word meaning.</li>
-              <li>• Use ONLY your keyboard: <strong>R, G, B, P</strong>.</li>
-            </ul>
-          </div>
-        </header>
-
-        <section className="mt-6 bg-white rounded-[2.5rem] border border-gray-100 shadow-sm p-8 md:p-12 flex flex-col items-center justify-center min-h-[55vh]">
-          <div className="w-full flex items-center justify-between mb-6">
-            <div className="text-xs uppercase tracking-widest text-gray-400">
-              {phase === 'intro' ? 'Ready' : phase === 'test' ? 'Randomized Phase' : 'Summary'}
+    <div className="max-w-4xl mx-auto p-6 min-h-screen flex flex-col justify-center">
+      <AnimatePresence mode="wait">
+        {phase === 'intro' && (
+          <motion.div 
+            key="intro"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="text-center space-y-8 bg-white p-12 rounded-[3rem] shadow-sm border border-gray-50"
+          >
+            <div>
+              <h2 className="text-3xl font-light text-gray-800">Emotional Stroop</h2>
+              <p className="text-[10px] text-[#5F7A7B] font-bold uppercase tracking-[0.2em]">Inhibitory Control & Emotional Regulation</p>
             </div>
-            <div className="text-xs text-[#5F7A7B] font-bold uppercase tracking-widest">
-              {phase === 'test' ? `Trial ${trialIndex + 1} / ${totalTrials}` : ''}
-            </div>
-          </div>
 
-          <div className="flex-1 w-full flex flex-col items-center justify-center">
-            {phase === 'intro' && (
-              <button onClick={startTask} className="px-8 py-3 rounded-full bg-gradient-to-br from-[#5F7A7B] to-[#4D6364] text-white shadow hover:scale-[1.02] transition-transform">
-                Start Randomized Assessment
+            <div className="max-w-md mx-auto space-y-4 text-left border-y border-gray-50 py-6">
+              <p className="text-sm text-gray-500 font-light leading-relaxed">
+                Identify the <b>ink color</b> of the word shown. Ignore the meaning of the word itself.
+              </p>
+              <div className="grid grid-cols-4 gap-2 text-center text-[10px] font-bold text-gray-400">
+                <div className="p-2 border border-gray-100 rounded-lg">KEY [R]<br/><span className="text-red-600">RED</span></div>
+                <div className="p-2 border border-gray-100 rounded-lg">KEY [G]<br/><span className="text-green-600">GREEN</span></div>
+                <div className="p-2 border border-gray-100 rounded-lg">KEY [B]<br/><span className="text-blue-600">BLUE</span></div>
+                <div className="p-2 border border-gray-100 rounded-lg">KEY [P]<br/><span className="text-purple-600">PURPLE</span></div>
+              </div>
+            </div>
+
+            <div className="pt-4 flex flex-col items-center gap-4">
+              <button 
+                onClick={startTask}
+                className="px-12 py-4 bg-[#5F7A7B] text-white rounded-full text-sm font-bold hover:shadow-xl transition-all"
+              >
+                Begin Randomized Assessment
               </button>
-            )}
+              <button onClick={handleBackToDashboard} className="text-[10px] text-gray-400 uppercase tracking-widest hover:text-[#5F7A7B]">
+                Return to Dashboard
+              </button>
+            </div>
+          </motion.div>
+        )}
 
-            {phase === 'test' && (
-              <div className="flex flex-col items-center gap-8 w-full">
-                <AnimatePresence mode="wait">
-                  {iti ? (
-                    <motion.div key="iti" initial={{ opacity: 0 }} animate={{ opacity: 0.5 }} exit={{ opacity: 0 }} className="text-5xl text-gray-300">+</motion.div>
-                  ) : current && (
-                    <motion.div key={current.word} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className={`text-6xl md:text-7xl font-light ${COLORS.find((c) => c.key === current.inkColor)?.textClass}`}>
-                      {current.word}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-                <p className="text-sm font-medium text-gray-300 mt-10">Press R, G, B, or P</p>
-              </div>
-            )}
+        {phase === 'test' && (
+          <motion.div 
+            key="test"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="space-y-12 text-center"
+          >
+            <div className="flex justify-between items-center mb-12">
+              <button onClick={handleBackToDashboard} className="text-[#5F7A7B] text-xs font-bold uppercase flex items-center gap-2">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                Exit
+              </button>
+              <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Trial {trialIndex + 1} / {totalTrials}</div>
+            </div>
 
-            {phase === 'summary' && (
-              <div className="w-full space-y-8">
-                <div className="grid gap-6 md:grid-cols-2">
-                  {/* Neutral Stats */}
-                  <div className="bg-gray-50/50 p-6 rounded-3xl border border-gray-100">
-                    <p className="text-[10px] text-gray-400 uppercase tracking-widest mb-3">Neutral Words</p>
-                    <div className="space-y-3">
-                      <div className="flex justify-between items-end">
-                        <span className="text-xs text-gray-500">Correct Responses</span>
-                        <span className="text-xl font-light">{neutralStats.correctCount} / 4</span>
-                      </div>
-                      <div className="flex justify-between items-end">
-                        <span className="text-xs text-gray-500">Accuracy</span>
-                        <span className="text-xl font-light">{neutralStats.accuracy}%</span>
-                      </div>
-                      <div className="flex justify-between items-end">
-                        <span className="text-xs text-gray-500">Avg RT</span>
-                        <span className="text-xl font-light">{neutralStats.avgRT}ms</span>
-                      </div>
-                    </div>
-                  </div>
+            <div className="h-64 flex items-center justify-center bg-white rounded-[3rem] shadow-sm border border-gray-50">
+              <AnimatePresence mode="wait">
+                {iti ? (
+                  <motion.div key="iti" initial={{ opacity: 0 }} animate={{ opacity: 0.5 }} exit={{ opacity: 0 }} className="text-6xl text-gray-200">+</motion.div>
+                ) : current && (
+                  <motion.div 
+                    key={current.word}
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className={`text-7xl md:text-8xl font-light tracking-tight ${COLORS.find((c) => c.key === current.inkColor)?.textClass}`}
+                  >
+                    {current.word}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+            <p className="text-[10px] text-gray-300 font-bold uppercase tracking-widest">Identify Ink Color: [R] [G] [B] [P]</p>
+          </motion.div>
+        )}
 
-                  {/* Emotional Stats */}
-                  <div className="bg-gray-50/50 p-6 rounded-3xl border border-gray-100">
-                    <p className="text-[10px] text-red-400 uppercase tracking-widest mb-3">Emotional Words</p>
-                    <div className="space-y-3">
-                      <div className="flex justify-between items-end">
-                        <span className="text-xs text-gray-500">Correct Responses</span>
-                        <span className="text-xl font-light">{emotionalStats.correctCount} / 4</span>
-                      </div>
-                      <div className="flex justify-between items-end">
-                        <span className="text-xs text-gray-500">Accuracy</span>
-                        <span className="text-xl font-light">{emotionalStats.accuracy}%</span>
-                      </div>
-                      <div className="flex justify-between items-end">
-                        <span className="text-xs text-gray-500">Avg RT</span>
-                        <span className="text-xl font-light">{emotionalStats.avgRT}ms</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+        {phase === 'summary' && (
+          <motion.div 
+            key="summary"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-center space-y-10"
+          >
+            <div>
+              <p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest mb-2">Interference Score</p>
+              <h3 className="text-7xl font-light text-[#5F7A7B]">{interference}ms</h3>
+              <p className="text-[10px] text-gray-400 mt-4 max-w-xs mx-auto leading-relaxed">A higher score suggests increased emotional sensitivity affecting focus.</p>
+            </div>
 
-                <div className="bg-white border-2 border-dashed border-gray-100 p-8 rounded-[2rem] text-center">
-                  <p className="text-[10px] text-gray-400 uppercase tracking-widest mb-1">Interference Score</p>
-                  <p className="text-5xl font-light text-gray-900 mb-4">{interference}ms</p>
-                  <p className="text-xs text-gray-500 max-w-md mx-auto leading-relaxed">
-                    A positive score indicates that processing emotional words (like "Trauma") took longer than neutral words, suggesting emotional interference in cognitive control.
-                  </p>
-                </div>
+            <div className="grid grid-cols-2 gap-4 max-w-md mx-auto">
+              <ResultCard label="Neutral RT" value={`${neutralStats.avgRT}ms`} sub={`${neutralStats.accuracy}% Acc`} />
+              <ResultCard label="Emotional RT" value={`${emotionalStats.avgRT}ms`} sub={`${emotionalStats.accuracy}% Acc`} />
+            </div>
 
-                <div className="flex justify-center gap-4">
-                  <button onClick={() => { setPhase('intro'); setTrialIndex(0); setRecords([]); setCurrent(null); setPosted(false); }} className="px-8 py-3 rounded-full border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors">Restart</button>
-                  <Link href="/onboarding/dashboard" className="px-8 py-3 rounded-full bg-[#5F7A7B] text-white">Continue</Link>
-                </div>
-              </div>
-            )}
-          </div>
-        </section>
-      </main>
+            <div className="flex flex-col items-center gap-4 pt-6">
+              <button 
+                onClick={() => { setPhase('intro'); setTrialIndex(0); setRecords([]); setPosted(false); }}
+                className="px-12 py-3 bg-[#5F7A7B] text-white rounded-full text-xs font-bold"
+              >
+                Retake Assessment
+              </button>
+              <button onClick={handleBackToDashboard} className="text-xs text-gray-400 hover:text-[#5F7A7B]">
+                Finish & Close
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function ResultCard({ label, value, sub }: { label: string, value: string | number, sub: string }) {
+  return (
+    <div className="bg-white p-6 rounded-3xl border border-gray-50 shadow-sm">
+      <p className="text-[9px] text-gray-400 uppercase font-bold mb-1">{label}</p>
+      <p className="text-2xl text-gray-800">{value}</p>
+      <p className="text-[9px] text-[#5F7A7B] font-bold mt-1 uppercase tracking-tighter">{sub}</p>
     </div>
   );
 }

@@ -4,8 +4,9 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import congnifyLogo from "../../../public/cognify_logo.png";
+// import congnifyLogo from "../../../public/cognify_logo.png";
 import { createBrowserClient } from "@supabase/ssr";
+import { BrainCircuitIcon } from "lucide-react";
 
 export default function UserInfoPage() {
   const router = useRouter();
@@ -128,7 +129,9 @@ export default function UserInfoPage() {
       </div>
       <div className="w-full max-w-xl space-y-8 relative z-10">
         <div className="flex flex-col items-center text-center">
-          <Image src={congnifyLogo} alt="Cognify Logo" width={150} height={150} className="mb-4" />
+             <div className="p-8 flex justify-center relative z-10">
+          <div className="text-xl flex flex-row gap-1"><BrainCircuitIcon></BrainCircuitIcon> Cognify</div>
+      </div>
           <h1 className="text-3xl font-light text-gray-800 tracking-tight">Personal Profile</h1>
           <p className="text-gray-500 mt-2 font-light">
             Helping us tailor your journey to your unique needs.
