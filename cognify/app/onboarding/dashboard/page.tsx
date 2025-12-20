@@ -311,13 +311,13 @@ function JournalWindow({ isOpen, onClose, userId }: { isOpen: boolean; onClose: 
   const [analyzing, setAnalyzing] = useState(false);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
 
-  const analyzeJournals = async () => {
+  const analyzeJournals = async (textOverride?: string) => {
   setAnalysis(null);
   setAnalysisError(null);
   setAnalyzing(true);
   try {
     const entries = [
-      journalText?.trim() || '',
+      (textOverride ?? journalText?.trim() ?? ''),
       ...history.map((h) => String(h.content || '')).filter(Boolean),
     ].filter(Boolean).slice(0, 10);
 
@@ -366,6 +366,7 @@ function JournalWindow({ isOpen, onClose, userId }: { isOpen: boolean; onClose: 
     setAnalyzing(false);
   }
 };
+
   useEffect(() => { if (isOpen && userId) fetchHistory(); }, [isOpen, userId]);
 
   const fetchHistory = async () => {
@@ -375,13 +376,52 @@ function JournalWindow({ isOpen, onClose, userId }: { isOpen: boolean; onClose: 
   };
 
   const saveJournal = async () => {
-    if (!journalText.trim() || !userId) return;
-    setIsLoading(true);
-    const { error } = await supabase.from('journals').insert([{ user_id: userId, content: journalText }]);
-    if (!error) { setJournalText(""); fetchHistory(); }
-    setIsLoading(false);
-  };
+  const text = journalText.trim();
+  if (!text || !userId) return;
 
+  setIsLoading(true);
+  const { data, error } = await supabase
+    .from('journals')
+    .insert([{ user_id: userId, content: text }])
+    .select('id')
+    .single();
+  setIsLoading(false);
+
+  if (error || !data?.id) return;
+
+  setJournalText('');
+  fetchHistory();
+
+  // Analyze via /api/journal
+  try {
+    const res = await fetch('/api/journal', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+    });
+
+    const raw = await res.text();
+    const analysis = JSON.parse(raw);
+
+    const { data: sessionData } = await supabase.auth.getSession();
+    const access_token = sessionData?.session?.access_token ?? undefined;
+
+    // Persist into journal_analysis via /api/journal-db
+      await fetch('/api/journal-db', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+        user_id: userId,
+        journal_id: data.id,
+        access_token,      
+        analysis,
+    }),
+  });
+    // Optionally: toast success, no on-screen analysis display
+  } catch (e) {
+    console.error('Journal analyze/persist failed:', e);
+  }
+};
   return (
     <AnimatePresence>
       {isOpen && (
@@ -409,36 +449,7 @@ function JournalWindow({ isOpen, onClose, userId }: { isOpen: boolean; onClose: 
               </button>
             </div>
           </div>
-          <div className="p-8 border-t border-gray-50 flex justify-end gap-3">
-  <button
-    onClick={analyzeJournals}
-    disabled={analyzing || (!journalText.trim() && history.length === 0)}
-    className="px-10 py-3 bg-white border border-gray-200 text-gray-700 rounded-full text-sm font-medium hover:bg-[#F9F9F7] disabled:opacity-50"
-  >
-    {analyzing ? 'Analyzing…' : 'Analyze'}
-  </button>
-  <button
-    onClick={saveJournal}
-    disabled={isLoading || !journalText.trim()}
-    className="px-10 py-3 bg-[#5F7A7B] text-white rounded-full text-sm font-medium"
-  >
-    {isLoading ? 'Holding this for you...' : 'Secure Reflection'}
-  </button>
-</div>
-                {(analysis || analysisError) && (
-        <div className="px-10 pb-4">
-          <div className="rounded-2xl border border-gray-100 bg-[#F9F9F7] p-4 text-xs text-gray-700">
-            <div className="uppercase text-[10px] tracking-widest opacity-60 mb-2">Analysis</div>
-            {!analysisError ? (
-              <pre className="whitespace-pre-wrap break-words">
-                {typeof analysis === 'string' ? analysis : JSON.stringify(analysis, null, 2)}
-              </pre>
-            ) : (
-              <div className="text-red-500">{analysisError}</div>
-            )}
-          </div>
-        </div>
-      )}
+          
         </motion.div>
       )}
     </AnimatePresence>
@@ -453,11 +464,57 @@ export default function Dashboard() {
   const [results, setResults] = useState<any>(null);
   const [isJournalOpen, setIsJournalOpen] = useState(false);
   const [isTaskOpen, setIsTaskOpen] = useState(false); // New state
+  const [streak, setStreak] = useState<number>(0);
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
+
+  const computeStreak = async (userId: string) => {
+  // fetch up to 365 recent journal dates for the user
+  const { data, error } = await supabase
+    .from('journals')
+    .select('created_at')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(365);
+
+  if (error || !data || data.length === 0) {
+    setStreak(0);
+    return;
+  }
+  const toUTCKey = (d: Date) => d.toISOString().slice(0, 10);
+  const dates = data
+    .map((r) => new Date(r.created_at))
+    .filter((d) => !Number.isNaN(d.getTime()));
+  const daySet = new Set(dates.map(toUTCKey));
+
+  // Most recent journal day (by timestamp)
+  dates.sort((a, b) => b.getTime() - a.getTime());
+  const latest = dates[0];
+
+  // Anchor at latest journal day, count backward while each previous day exists
+  let count = 1;
+  // normalize to midnight UTC
+  let cursor = new Date(Date.UTC(
+    latest.getUTCFullYear(),
+    latest.getUTCMonth(),
+    latest.getUTCDate()
+  ));
+
+  while (true) {
+    cursor.setUTCDate(cursor.getUTCDate() - 1);
+    const key = toUTCKey(cursor);
+    if (daySet.has(key)) {
+      count += 1;
+    } else {
+      break;
+    }
+  }
+
+  setStreak(count);
+};
 
 useEffect(() => {
     const getData = async () => {
@@ -476,6 +533,8 @@ useEffect(() => {
         .single();
       
       setResults(data);
+
+      await computeStreak(user.id);
     };
     getData();
   }, [router, supabase]);
@@ -547,7 +606,8 @@ useEffect(() => {
             <button onClick={() => setIsTaskOpen(true)} className="mt-6 px-6 py-2 bg-white text-[#5F7A7B] rounded-full text-xs font-medium hover:shadow-lg transition-all active:scale-95">Start Now</button>
           </div>
 
-          <MetricCard title="Daily Streak" value="1" sub="Day Started" />
+          {/* <MetricCard title="Daily Streak" value="1" sub="Day Started" /> */}
+          <MetricCard title="Daily Streak" value={String(streak)} sub={streak > 1 ? 'Consecutive Days' : 'Day Started'} />
           <div onClick={() => setIsJournalOpen(true)} className="cursor-pointer">
             <MetricCard title="Journaling" value="+" sub="Tap to write entry" />
           </div>
