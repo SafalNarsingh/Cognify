@@ -135,6 +135,25 @@ export default function NBackGame() {
     } finally {
       setIsSaving(false);
     }
+    const saveDailyProgress = async (accuracy: number, rt: number) => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+  
+  // Normalize RT: Suppose 1000ms is 0 and 200ms is 100
+  const normalizedRT = Math.max(0, Math.min(100, (1000 - rt) / 8));
+  const normalizedCognitive = (accuracy * 0.7) + (normalizedRT * 0.3);
+
+  // Upsert into progress_entries
+  const { error } = await supabase
+    .from('progress_entries')
+    .upsert({ 
+      user_id: user.id, 
+      date: new Date().toISOString().split('T')[0],
+      cognitive_score: normalizedCognitive
+    }, { onConflict: 'user_id, date' });
+    
+  // Note: Your improvement_index can be calculated here or via a Supabase Trigger
+};
   };
 
   const recordTrial = useCallback((responded: boolean, reactionTime: number | null) => {

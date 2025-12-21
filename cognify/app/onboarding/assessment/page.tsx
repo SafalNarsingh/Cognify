@@ -106,7 +106,7 @@ export default function AssessmentPage() {
                 </div>
               </div>
 
-              <div className="bg-[#F9F9F7] p-6 rounded-3xl border border-gray-50 flex gap-4">
+              <div className="bg-[#F9F9F7] p-3 rounded-3xl border border-gray-50 flex gap-4">
                 <ShieldAlert className="text-[#5F7A7B] shrink-0" size={20} />
                 <div>
                   <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1">Clinical Insight</p>
@@ -114,11 +114,32 @@ export default function AssessmentPage() {
                 </div>
               </div>
 
+                      <div className="pt-0 border-t border-gray-50">
+          <div className="bg-[#F9F9F7] p-6 rounded-[2rem] border border-dashed border-gray-200 flex items-center justify-between">
+            <div className="text-left">
+              <p className="text-[#5F7A7B] font-medium italic">Mindfulness Support</p>
+              <p className="text-[10px] text-gray-400 uppercase tracking-widest mt-1">Pre-task Regulation</p>
+            </div>
+            <button 
+              onClick={() => router.push('/onboarding/dashboard?open=meditation')}
+              className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100"
+            >
+              <Play size={18} fill="#5F7A7B" stroke="none" />
+            </button>
+          </div>
+        </div>
+
               <button 
                 onClick={() => router.push(recommendation.path)}
                 className="w-full py-5 bg-[#5F7A7B] text-white rounded-3xl text-sm font-bold uppercase tracking-widest hover:bg-[#4D6364] transition-all flex items-center justify-center gap-3"
               >
                 Launch Assessment <ArrowRight size={16} />
+              </button>
+               <button 
+                onClick={() => router.push('/onboarding/dashboard')}
+                className="w-full py-5 bg-[#F9F9F7] text-gray-600 rounded-3xl text-sm  font-bold uppercase tracking-widest hover:bg-[#cccccc] transition-all flex items-center justify-center gap-3 "
+              >
+                Continue to DashBoard <ArrowRight size={16} />
               </button>
             </motion.div>
           ) : (
@@ -136,20 +157,7 @@ export default function AssessmentPage() {
           )}
         </AnimatePresence>
 
-        <div className="pt-8 border-t border-gray-50">
-          <div className="bg-[#F9F9F7] p-6 rounded-[2rem] border border-dashed border-gray-200 flex items-center justify-between">
-            <div className="text-left">
-              <p className="text-[#5F7A7B] font-medium italic">Mindfulness Support</p>
-              <p className="text-[10px] text-gray-400 uppercase tracking-widest mt-1">Pre-task Regulation</p>
-            </div>
-            <button 
-              onClick={() => router.push('/onboarding/dashboard?open=meditation')}
-              className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100"
-            >
-              <Play size={18} fill="#5F7A7B" stroke="none" />
-            </button>
-          </div>
-        </div>
+
       </motion.div>
     </div>
   );

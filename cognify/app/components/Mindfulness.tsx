@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRef, useEffect } from 'react';
+import { createBrowserClient } from '@supabase/ssr';
 
 const MINDFULNESS_DATA = [
 
@@ -165,6 +166,10 @@ export function MindfulnessWindow({
   const [view, setView] = useState<'list' | 'topics' | 'player'>('list');
   const [selectedPack, setSelectedPack] = useState<any>(null);
   const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
+   const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
 
   const formatTime = (time: number) => {
     if (isNaN(time)) return "00:00";
@@ -173,6 +178,69 @@ export function MindfulnessWindow({
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const handleMeditationComplete = async (minutes: number) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+  // Normalize: 20 mins = 100%
+  const normalizedMed = Math.min(100, (minutes / 20) * 100);
+  
+  // Save raw log for history
+  await supabase.from('meditation_logs').insert({ 
+    user_id: user.id, 
+    duration_minutes: minutes,
+    session_type: 'Breathing' 
+  });
+
+  // Update daily progress summary
+  await updateDailyProgress('meditation', normalizedMed);
+};
+
+/**
+ * Helper to update the holistic progress entry without overwriting existing data.
+ * @param type - 'cognitive' or 'meditation'
+ * @param score - The normalized 0-100 score
+ */
+const updateDailyProgress = async (type: 'cognitive' | 'meditation', score: number) => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+
+  const today = new Date().toISOString().split('T')[0];
+
+  // 1. Fetch existing entry for today
+  const { data: existingEntry } = await supabase
+    .from('progress_entries')
+    .select('*')
+    .eq('user_id', user.id)
+    .eq('date', today)
+    .single();
+
+  // 2. Prepare merged values
+  // If entry exists, use existing values; otherwise start at 0
+  let cognitive = existingEntry?.cognitive_score || 0;
+  let meditation = existingEntry?.meditation_score || 0;
+
+  if (type === 'cognitive') cognitive = score;
+  if (type === 'meditation') meditation = score;
+
+  // 3. Calculate Weighted Improvement Index
+  // Logic: 60% Cognitive + 40% Meditation
+  const improvementIndex = (cognitive * 0.6) + (meditation * 0.4);
+
+  // 4. Upsert the merged record
+  const { error } = await supabase
+    .from('progress_entries')
+    .upsert({
+      user_id: user.id,
+      date: today,
+      cognitive_score: cognitive,
+      meditation_score: meditation,
+      improvement_index: Math.round(improvementIndex),
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'user_id, date' });
+
+  if (error) console.error("Error updating daily index:", error.message);
+};
   const resetAndClose = () => {
     onClose();
     setTimeout(() => { 

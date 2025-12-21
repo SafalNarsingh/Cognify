@@ -10,6 +10,7 @@ import { MindfulnessWindow } from '@/app/components/Mindfulness';
 import { FloatingPlayer } from '@/app/components/FloatingPlayer'; // Check your folder path
 import { Brain, BrainCircuitIcon } from "lucide-react";
 import { title } from 'process';
+import { HolisticProgressChart } from '@/app/components/HostilicProgresChart';
 
 type ChatMessage = { role: 'user' | 'model'; content: string };
 
@@ -830,39 +831,58 @@ return (
               </div>
             </header>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="md:col-span-2 bg-white p-10 rounded-[2.5rem] border border-gray-50 shadow-sm hover:shadow-md transition-shadow h-72">
-                <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-[0.2em] mb-8">Cognitive Index</h3>
-                <div className="flex items-end justify-between h-32 gap-3 px-4">
-                  {[40, 70, 45, 90, 65, 80, 50, 60, 85].map((h, i) => (
-                    <div key={i} className="flex-1 bg-gradient-to-t from-[#5F7A7B] to-[#7A9A9B] rounded-full transition-all hover:opacity-80 cursor-pointer" style={{ height: `${h}%` }}></div>
-                  ))}
+            {/* --- MAIN METRICS GRID --- */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
+              
+              {/* 1. Dynamic Holistic Chart (Spans 2 columns) */}
+              <div className="md:col-span-2 bg-white p-10 rounded-[2.5rem] border border-gray-50 shadow-sm hover:shadow-md transition-shadow h-96">
+                <div className="flex justify-between items-start mb-8">
+                  <div>
+                    <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-[0.2em]">Holistic Improvement Index</h3>
+                    <p className="text-[9px] text-gray-400 mt-1">Cognitive (60%) + Meditation (40%)</p>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[10px] font-bold text-[#5F7A7B] uppercase tracking-widest">Last 7 Days</span>
+                  </div>
+                </div>
+                
+                <div className="h-60 px-2">
+                  <HolisticProgressChart />
                 </div>
               </div>
 
-              {/* UPDATED PRIORITY CARD */}
-              <div className="bg-gradient-to-br from-[#5F7A7B] to-[#4D6364] p-10 rounded-[2.5rem] text-white flex flex-col justify-between shadow-lg hover:shadow-xl transition-shadow">
-  <p className="text-[10px] opacity-60 uppercase tracking-widest">Priority Task</p>
-  <p className="text-xl font-light leading-snug">
-    {priorityTask
-      ? priorityTask.blurb
-      : 'Select a clinical assessment to begin your cognitive profiling.'}
-  </p>
-  <button
-    onClick={() => {
-      if (priorityTask) {
-        router.push(priorityTask.path);
-      } else {
-        setIsTaskOpen(true);
-      }
-    }}
-    className="mt-6 w-fit px-8 py-2.5 bg-white text-[#5F7A7B] rounded-full text-xs font-bold transition-all hover:shadow-xl active:scale-95"
-  >
-    {priorityTask ? `Start ${priorityTask.name}` : 'Choose Task'}
-  </button>
-</div>
+              {/* 2. Priority Task Card (1 column) */}
+              <div className="bg-gradient-to-br from-[#5F7A7B] to-[#4D6364] p-10 rounded-[2.5rem] text-white flex flex-col justify-between shadow-lg hover:shadow-xl transition-shadow h-96">
+                <div>
+                  <p className="text-[10px] opacity-60 uppercase tracking-widest mb-4">Recommended for you</p>
+                  <p className="text-xl font-light leading-snug">
+                    {priorityTask
+                      ? priorityTask.blurb
+                      : 'Select a clinical assessment to begin your cognitive profiling.'}
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    if (priorityTask) {
+                      router.push(priorityTask.path);
+                    } else {
+                      setIsTaskOpen(true);
+                    }
+                  }}
+                  className="mt-6 w-full py-4 bg-white text-[#5F7A7B] rounded-2xl text-xs font-bold transition-all hover:bg-gray-50 active:scale-95"
+                >
+                  {priorityTask ? `Start ${priorityTask.name}` : 'Choose Task'}
+                </button>
+              </div>
+            </div>
 
-              <MetricCard title="Daily Streak" value={String(streak)} sub={streak > 1 ? 'Consecutive Days' : 'Day Started'} />
+            {/* --- LOWER STATS ROW --- */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              <MetricCard 
+                title="Daily Streak" 
+                value={String(streak)} 
+                sub={streak > 1 ? 'Consecutive Days' : 'Day Started'} 
+              />
               <div onClick={() => setIsJournalOpen(true)} className="cursor-pointer">
                 <MetricCard title="Journaling" value="+" sub="Tap to write entry" />
               </div>
@@ -873,6 +893,7 @@ return (
               />
             </div>
 
+            {/* --- MINDFULNESS SECTION --- */}
             <section onClick={() => setIsMindfulnessOpen(true)} className="mt-8 bg-white p-10 rounded-[2.5rem] border border-gray-100 shadow-sm hover:shadow-md flex flex-col sm:flex-row justify-between items-center gap-6 cursor-pointer transition-all group">
               <div className="text-center sm:text-left">
                 <h4 className="text-2xl font-light text-gray-900">Mindfulness & Tools</h4>
@@ -887,15 +908,15 @@ return (
           </main>
         </motion.div>
       ) : (
-        /* --- EXPERIMENT VIEW (FLANKER TASK) --- */
+        /* --- EXPERIMENT VIEW --- */
         <motion.div 
-          key="flanker-task"
+          key="experiment"
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: 20 }}
           className="flex-1 flex flex-col items-center justify-center p-6"
         >
-          {/* <FlankerTask onBack={() => setIsTaskActive(false)} /> */}
+          {/* Your Task Component would go here */}
         </motion.div>
       )}
     </AnimatePresence>
@@ -949,7 +970,6 @@ return (
   </div>
 );
 }
-
 function NavItem({ label, icon, active = false }: { label: string, icon: React.ReactNode, active?: boolean }) {
   return (
     <div className={`flex flex-col md:flex-row items-center gap-1 md:gap-2.5 transition-all group px-2 py-1 ${active ? 'text-[#5F7A7B]' : 'text-gray-400 hover:text-[#5F7A7B]'}`}>
