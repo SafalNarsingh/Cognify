@@ -127,6 +127,66 @@ export async function POST(req: NextRequest) {
     const baseline = (top?.v ?? 0) > 50 ? 'Elevated risk' : 'Stable';
     const severity = mapSeverityToRiskLabel(results?.phq9_severity ?? null);
 
+    // NEW: Cognitive task results
+    const { data: stroopRows, error: sErr } = await supabase
+      .from('stroop_results')
+      .select('id, user_id, created_at, rt_neutral_avg, rt_emotional_avg, accuracy_neutral, accuracy_emotional, interference_score')
+      .eq('user_id', user_id)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    const { data: flankerRows, error: fErr } = await supabase
+      .from('flanker_results')
+      .select('id, user_id, score, misses, false_positives, accuracy, avg_reaction_time_ms, reaction_times, created_at')
+      .eq('user_id', user_id)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    const { data: nbackRows, error: nErr } = await supabase
+      .from('nback')
+      .select('id, user_id, created_at, accuracy, avgReactionTime, correctRejections, falsePositives, hits, misses, totalTargets, totalTrials')
+      .eq('user_id', user_id)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    // Normalize payloads (fail-soft if a table is missing or returns error)
+    const stroop = (stroopRows ?? []).map((r) => ({
+      id: String(r.id),
+      user_id: r.user_id,
+      created_at: r.created_at,
+      rt_neutral_avg: Number(r.rt_neutral_avg ?? 0),
+      rt_emotional_avg: Number(r.rt_emotional_avg ?? 0),
+      accuracy_neutral: Number(r.accuracy_neutral ?? 0),
+      accuracy_emotional: Number(r.accuracy_emotional ?? 0),
+      interference_score: Number(r.interference_score ?? 0),
+    }));
+
+    const flanker = (flankerRows ?? []).map((r) => ({
+      id: String(r.id),
+      user_id: r.user_id,
+      created_at: r.created_at,
+      score: Number(r.score ?? 0),
+      misses: Number(r.misses ?? 0),
+      false_positives: Number(r.false_positives ?? 0),
+      accuracy: Number(r.accuracy ?? 0),
+      avg_reaction_time_ms: Number(r.avg_reaction_time_ms ?? 0),
+      reaction_times: r.reaction_times ?? null,
+    }));
+
+    const nback = (nbackRows ?? []).map((r) => ({
+      id: String(r.id),
+      user_id: r.user_id,
+      created_at: r.created_at,
+      accuracy: Number(r.accuracy ?? 0),
+      avgReactionTime: Number(r.avgReactionTime ?? 0),
+      correctRejections: Number(r.correctRejections ?? 0),
+      falsePositives: Number(r.falsePositives ?? 0),
+      hits: Number(r.hits ?? 0),
+      misses: Number(r.misses ?? 0),
+      totalTargets: Number(r.totalTargets ?? 0),
+      totalTrials: Number(r.totalTrials ?? 0),
+    }));
+
     const payload = {
       journal: journalPayload,
       user_profile: profileRow
@@ -148,6 +208,9 @@ export async function POST(req: NextRequest) {
         baseline,
         severity,
       },
+      stroop,
+      flanker,
+      nback,
     };
 
     const upstream = await fetch(`${UPSTREAM}${SUMMARIZER_PATH}`, {

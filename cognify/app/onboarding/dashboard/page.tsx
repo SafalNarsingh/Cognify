@@ -538,6 +538,24 @@ function JournalWindow({ isOpen, onClose, userId }: { isOpen: boolean; onClose: 
   );
 }
 
+const TASK_RESOURCES = {
+stroop: {
+name: 'Emotional Stroop',
+path: '/onboarding/dashboard/stroop',
+blurb: 'Complete your Stroop assessment to baseline attention.',
+},
+flanker: {
+name: 'Flanker Task',
+path: '/onboarding/dashboard/flanker',
+blurb: 'Run a Flanker task to assess inhibitory control.',
+},
+nback: {
+name: 'N-Back',
+path: '/onboarding/dashboard/nback',
+blurb: 'Do an N-Back to gauge working memory capacity.',
+},
+};
+
 // --- MAIN DASHBOARD ---
 export default function Dashboard() {
   const router = useRouter();
@@ -558,10 +576,76 @@ export default function Dashboard() {
   activePack: null as string | null
 });
 
+const [priorityTask, setPriorityTask] = useState<{ name: string; path: string; blurb: string } | null>(null);
+
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
+
+  type TaskKey = keyof typeof TASK_RESOURCES;
+
+const getRecommendedTaskKey = (conditionRaw?: string | null): TaskKey => {
+  const c = String(conditionRaw || '').toLowerCase();
+
+  // Executive function / attention → Flanker
+  if (/(adhd|executive|inhibit|attention|focus)/.test(c)) return 'flanker';
+  // Memory / cognitive decline → N-Back
+  if (/(dementia|cognitive decline|memory|alz|working memory)/.test(c)) return 'nback';
+  // Mood/anxiety/stress → Emotional Stroop
+  if (/(anxiety|depress|mood|stress|ptsd)/.test(c)) return 'stroop';
+
+  // Default
+  return 'stroop';
+};
+
+  useEffect(() => {
+  const getData = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      router.push('/auth/login');
+      return;
+    }
+    setUser(user);
+
+    const { data } = await supabase
+      .from('result_q')
+      .select('*')
+      .eq('user_id', user.id)
+      .single();
+    setResults(data);
+
+    await computeStreak(user.id);
+
+    // Fetch condition from user_profiles (fallback to user_profile)
+    let condition: string | null = null;
+    try {
+      const { data: rows1, error: err1 } = await supabase
+        .from('user_profiles')
+        .select('condition')
+        .eq('user_id', user.id)
+        .limit(1);
+
+      condition = rows1?.[0]?.condition ?? null;
+
+      if ((!rows1 || rows1.length === 0) || err1) {
+        const { data: rows2 } = await supabase
+          .from('user_profile')
+          .select('condition')
+          .eq('user_id', user.id)
+          .limit(1);
+        condition = rows2?.[0]?.condition ?? condition;
+      }
+    } catch {
+      // fail-soft: leave condition null
+    }
+
+    const key = getRecommendedTaskKey(condition);
+    setPriorityTask(TASK_RESOURCES[key]);
+  };
+  getData();
+}, [router, supabase]);
+
 
   const computeStreak = async (userId: string) => {
   // fetch up to 365 recent journal dates for the user
@@ -758,15 +842,25 @@ return (
 
               {/* UPDATED PRIORITY CARD */}
               <div className="bg-gradient-to-br from-[#5F7A7B] to-[#4D6364] p-10 rounded-[2.5rem] text-white flex flex-col justify-between shadow-lg hover:shadow-xl transition-shadow">
-                <p className="text-[10px] opacity-60 uppercase tracking-widest">Priority Task</p>
-                <p className="text-xl font-light leading-snug">Complete your first Flanker assessment to baseline ADHD inhibitory control.</p>
-                <button 
-                  onClick={() => setIsTaskOpen(true)} 
-                  className="mt-6 w-fit px-8 py-2.5 bg-white text-[#5F7A7B] rounded-full text-xs font-bold transition-all hover:shadow-xl active:scale-95"
-                >
-                  Start Now
-                </button>
-              </div>
+  <p className="text-[10px] opacity-60 uppercase tracking-widest">Priority Task</p>
+  <p className="text-xl font-light leading-snug">
+    {priorityTask
+      ? priorityTask.blurb
+      : 'Select a clinical assessment to begin your cognitive profiling.'}
+  </p>
+  <button
+    onClick={() => {
+      if (priorityTask) {
+        router.push(priorityTask.path);
+      } else {
+        setIsTaskOpen(true);
+      }
+    }}
+    className="mt-6 w-fit px-8 py-2.5 bg-white text-[#5F7A7B] rounded-full text-xs font-bold transition-all hover:shadow-xl active:scale-95"
+  >
+    {priorityTask ? `Start ${priorityTask.name}` : 'Choose Task'}
+  </button>
+</div>
 
               <MetricCard title="Daily Streak" value={String(streak)} sub={streak > 1 ? 'Consecutive Days' : 'Day Started'} />
               <div onClick={() => setIsJournalOpen(true)} className="cursor-pointer">
